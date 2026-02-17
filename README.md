@@ -2,7 +2,7 @@ This is a professional, GitHub-ready `README.md` for your project. It highlights
 
 ---
 
-# 🏎️ Bujji (AI Assistant)
+# Bujji (AI Assistant)
 
 **Bujji** is an ultra-lightweight, modular AI assistant inspired by [Sipeed's PicoClaw](). It is designed to run on low-resource systems (like an old Mac, a Raspberry Pi, or a thin client) while providing powerful agentic capabilities through a "Skills and Tools" architecture.
 
