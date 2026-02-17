@@ -5,7 +5,33 @@ __pycache__/
 *.pyc
 bujji/connections/__pycache__
 bujji/tools/__pycache__
-.venv/*
-*.venv
+
 workspace/cron
 .env
+
+# Byte-code files
+*.pyc
+__pycache__/
+
+# Virtual environment
+.venv/
+venv/
+env/
+# specific to conda
+.conda/ 
+
+# Editor/IDE files
+.idea/  # specific to PyCharm
+.vscode/ # specific to VS Code (optional, can contain useful config)
+*.swp   # specific to Vim
+
+# OS and misc files
+.DS_Store # specific to macOS
+Thumbs.db # specific to Windows
+
+# Data and logs
+*.log
+/data/ # if your project generates large data files
+
+# Python version file
+.python-version
