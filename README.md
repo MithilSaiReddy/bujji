@@ -1,6 +1,4 @@
-This is a professional, GitHub-ready `README.md` for your project. It highlights the **Bujji** branding (inspired by the feisty AI from *Kalki 2898 AD*) and explains the "PicoClaw-style" modular architecture so users know how to extend it.
 
----
 
 # Bujji (AI Assistant)
 
