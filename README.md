@@ -37,7 +37,7 @@ Bujji follows a strict modular structure to make customization easy:
 ### 1. Installation
 
 ```bash
-git clone https://github.com/yourusername/bujji.git
+git clone https://github.com/MithilSaiReddy/bujji.git
 cd bujji
 python3 -m venv venv && source venv/bin/activate
 pip install requests discord.py
