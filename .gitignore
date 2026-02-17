@@ -5,7 +5,7 @@ __pycache__/
 *.pyc
 bujji/connections/__pycache__
 bujji/tools/__pycache__
-.venv/
-.venv
+.venv/*
+*.venv
 workspace/cron
 .env
