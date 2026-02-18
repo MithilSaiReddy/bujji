@@ -17,7 +17,7 @@ from bujji.tools.base import register_tool
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
 def _memory_path(ctx: dict) -> Path:
-    return ctx["workspace"] / "memory.json"
+    return ctx["workspace"] / "workspace/memory.json"
 
 
 def _load(ctx: dict) -> dict:
