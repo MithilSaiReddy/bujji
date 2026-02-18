@@ -7,6 +7,14 @@ All providers (OpenAI, Anthropic, Google, Mistral, Groq, etc.) use the same
 
 import json
 import sys
+import time
+
+# ── Retry configuration ───────────────────────────────────────────────────────
+# Retries on transient HTTP errors (429 rate-limit, 5xx server errors).
+# Uses exponential back-off: 2s → 4s → 8s.  No new dependencies needed.
+_RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
+_MAX_RETRIES        = 3
+_BACKOFF_BASE       = 2   # seconds
 
 try:
     import requests as _requests
@@ -64,22 +72,7 @@ class LLMProvider:
         headers = self._build_headers()
         payload = self._build_payload(messages, tools, stream)
         url     = f"{self.api_base}/chat/completions"
-
-        try:
-            resp = _requests.post(
-                url, headers=headers, json=payload,
-                timeout=120, stream=stream
-            )
-        except _requests.exceptions.ConnectionError:
-            raise RuntimeError(
-                f"Cannot connect to {url}.\n"
-                f"Check your API base URL and internet connection."
-            )
-
-        if not resp.ok:
-            raise RuntimeError(
-                f"API error {resp.status_code}: {resp.text[:400]}"
-            )
+        resp    = self._post_with_retry(url, headers, payload, stream)
 
         return self._collect_stream(resp) if stream else resp.json()
 
@@ -92,9 +85,65 @@ class LLMProvider:
         }
         # Anthropic uses a different auth scheme
         if self.name == "anthropic":
-            headers["x-api-key"]          = self.api_key
-            headers["anthropic-version"]  = "2023-06-01"
+            headers["x-api-key"]         = self.api_key
+            headers["anthropic-version"] = "2023-06-01"
         return headers
+
+    def _post_with_retry(self, url: str, headers: dict, payload: dict, stream: bool):
+        """
+        POST with exponential back-off for transient errors.
+
+        Retries up to _MAX_RETRIES times on:
+          - Connection errors  (network blip)
+          - 429 rate-limit     (back off and retry)
+          - 5xx server errors  (upstream hiccup)
+
+        Back-off schedule: 2s → 4s → 8s  (no new dependencies, just time.sleep).
+        """
+        last_exc = None
+        for attempt in range(_MAX_RETRIES + 1):
+            try:
+                resp = _requests.post(
+                    url, headers=headers, json=payload,
+                    timeout=120, stream=stream,
+                )
+            except _requests.exceptions.ConnectionError as e:
+                last_exc = RuntimeError(
+                    f"Cannot connect to {url}.\n"
+                    f"Check your API base URL and internet connection."
+                )
+                if attempt < _MAX_RETRIES:
+                    wait = _BACKOFF_BASE ** (attempt + 1)
+                    print(
+                        f"[WARN] Connection error (attempt {attempt + 1}/{_MAX_RETRIES}), "
+                        f"retrying in {wait}s…",
+                        file=sys.stderr,
+                    )
+                    time.sleep(wait)
+                continue
+
+            # Successful connection — check HTTP status
+            if resp.status_code not in _RETRY_STATUS_CODES:
+                if not resp.ok:
+                    raise RuntimeError(
+                        f"API error {resp.status_code}: {resp.text[:400]}"
+                    )
+                return resp   # ← happy path
+
+            # Retryable HTTP error
+            last_exc = RuntimeError(
+                f"API error {resp.status_code}: {resp.text[:400]}"
+            )
+            if attempt < _MAX_RETRIES:
+                wait = _BACKOFF_BASE ** (attempt + 1)
+                print(
+                    f"[WARN] HTTP {resp.status_code} (attempt {attempt + 1}/{_MAX_RETRIES}), "
+                    f"retrying in {wait}s…",
+                    file=sys.stderr,
+                )
+                time.sleep(wait)
+
+        raise last_exc or RuntimeError("All retry attempts failed.")
 
     def _build_payload(self, messages, tools, stream) -> dict:
         payload: dict = {

@@ -93,6 +93,11 @@ class ToolRegistry:
     and provides the call() / schema() interface for the agent loop.
     """
 
+    # Max characters returned by any single tool call.
+    # Prevents a runaway shell command or giant file from blowing up the context.
+    # Override in config: agents.defaults.max_tool_output_chars
+    DEFAULT_MAX_OUTPUT = 6000
+
     def __init__(self, cfg: dict, send_message_fn=None, workspace=None):
         from bujji.config import workspace_path
 
@@ -101,6 +106,9 @@ class ToolRegistry:
         self.workspace.mkdir(parents=True, exist_ok=True)
         self.restrict         = cfg["agents"]["defaults"].get("restrict_to_workspace", False)
         self.send_message_fn  = send_message_fn
+        self.max_output       = cfg["agents"]["defaults"].get(
+            "max_tool_output_chars", self.DEFAULT_MAX_OUTPUT
+        )
 
         # Build a context dict passed into every tool that needs it
         self._ctx = {
@@ -132,8 +140,20 @@ class ToolRegistry:
             args = {**args, "_ctx": self._ctx}
 
         try:
-            return fn(**args)
+            result = fn(**args)
         except TypeError as e:
             return f"Tool argument error ({name}): {e}"
         except Exception as e:
             return f"Tool error ({name}): {e}"
+
+        # ── Truncate oversized output so we never blow up the context window ──
+        output = str(result)
+        if len(output) > self.max_output:
+            kept    = output[: self.max_output]
+            dropped = len(output) - self.max_output
+            output  = (
+                kept
+                + f"\n\n[...output truncated: {dropped} characters omitted. "
+                f"Use read_file or a more specific command to see the rest.]"
+            )
+        return output
