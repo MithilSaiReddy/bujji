@@ -5,7 +5,6 @@ __pycache__/
 *.pyc
 bujji/connections/__pycache__
 bujji/tools/__pycache__
-workspace/memory.json
 .env
 
 # Byte-code files
