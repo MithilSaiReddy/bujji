@@ -2,7 +2,7 @@
 
 # Bujji (AI Assistant)
 
-**Bujji** is an ultra-lightweight, modular AI assistant inspired by [Sipeed's PicoClaw](). It is designed to run on low-resource systems (like an old Mac, a Raspberry Pi, or a thin client) while providing powerful agentic capabilities through a "Skills and Tools" architecture.
+**Bujji** is an ultra-lightweight, modular AI assistant inspired by [Sipeed's PicoClaw](https://github.com/sipeed/picoclaw). It is designed to run on low-resource systems (like an old Mac, a Raspberry Pi, or a thin client) while providing powerful agentic capabilities through a "Skills and Tools" architecture.
 
 Unlike heavy AI frameworks, Bujji is built to be **human-readable** and **pluggable**. You can teach it new tricks just by dropping a Markdown file into a folder or a Python script into a directory.
 
@@ -84,8 +84,8 @@ Tools are Python functions. To add a "Weather" tool:
 
 ## 📜 Credits & Inspiration
 
-* **PicoClaw:** Original concept and architecture by [Sipeed]().
-* **Bujji:** Character and name inspiration from *Kalki 2898 AD*.
+* **PicoClaw:** Original concept and architecture by [Sipeed](https://github.com/sipeed/picoclaw).
+* **Bujji:** Character and name inspiration from [*Kalki 2898 AD*](https://en.wikipedia.org/wiki/Kalki_2898_AD).
 
 ---
 
