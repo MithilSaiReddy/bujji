@@ -1,142 +1,59 @@
 """
 bujji/tools/memory.py
-Persistent memory tool — remember, recall, forget, list_memories.
+Memory tools — read and update USER.md in the workspace.
 
-Facts are stored in workspace/memory.json as plain human-readable JSON.
-You can edit the file directly to correct or seed bujji's memory.
+Instead of a key-value store, bujji keeps a single human-readable
+Markdown file (USER.md) that describes the user. This is richer,
+more natural, and editable in any text editor.
 
-Philosophy: No database. No embeddings. Just a JSON file you can open in
-any text editor. Fits perfectly on a Raspberry Pi.
+Tools:
+    read_user_memory    Read the current USER.md
+    update_user_memory  Overwrite USER.md with updated content
+
+Philosophy: One Markdown file beats a JSON key-value store.
+You can read it, edit it, version-control it.
 """
-
-import json
-from pathlib import Path
 
 from bujji.tools.base import register_tool
 
-# ── Internal helpers ──────────────────────────────────────────────────────────
-
-def _memory_path(ctx: dict) -> Path:
-    return ctx["workspace"] / "workspace/memory.json"
-
-
-def _load(ctx: dict) -> dict:
-    path = _memory_path(ctx)
-    if not path.exists():
-        return {}
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-
-def _save(ctx: dict, data: dict) -> None:
-    path = _memory_path(ctx)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-
-
-# ── Tools ─────────────────────────────────────────────────────────────────────
 
 @register_tool(
     description=(
-        "Save a piece of information to persistent memory so you can recall it "
-        "in future conversations. Use a short descriptive key and a value. "
-        "Examples: key='user_name' value='Alice', key='preferred_language' value='Python'."
+        "Read the USER.md file — your persistent memory about the user. "
+        "Call this at the start of a conversation if you need context about "
+        "who the user is, their projects, or their preferences."
     ),
-    parameters={
-        "type": "object",
-        "required": ["key", "value"],
-        "properties": {
-            "key": {
-                "type":        "string",
-                "description": "Short identifier for this memory (e.g. 'user_name', 'project_path').",
-            },
-            "value": {
-                "type":        "string",
-                "description": "The information to remember.",
-            },
-        },
-    },
-)
-def remember(key: str, value: str, _ctx: dict = None) -> str:
-    data = _load(_ctx)
-    data[key] = value
-    _save(_ctx, data)
-    return f"Remembered: {key} = {value}"
-
-
-@register_tool(
-    description=(
-        "Recall a specific piece of information from persistent memory by key."
-    ),
-    parameters={
-        "type": "object",
-        "required": ["key"],
-        "properties": {
-            "key": {
-                "type":        "string",
-                "description": "The memory key to look up.",
-            },
-        },
-    },
-)
-def recall(key: str, _ctx: dict = None) -> str:
-    data = _load(_ctx)
-    if key not in data:
-        return f"No memory found for key: '{key}'"
-    return f"{key} = {data[key]}"
-
-
-@register_tool(
-    description="Delete a specific memory by key.",
-    parameters={
-        "type": "object",
-        "required": ["key"],
-        "properties": {
-            "key": {
-                "type":        "string",
-                "description": "The memory key to delete.",
-            },
-        },
-    },
-)
-def forget(key: str, _ctx: dict = None) -> str:
-    data = _load(_ctx)
-    if key not in data:
-        return f"No memory found for key: '{key}'"
-    del data[key]
-    _save(_ctx, data)
-    return f"Forgot: {key}"
-
-
-@register_tool(
-    description="List all keys and values currently stored in persistent memory.",
     parameters={"type": "object", "properties": {}},
 )
-def list_memories(_ctx: dict = None) -> str:
-    data = _load(_ctx)
-    if not data:
-        return "Memory is empty."
-    lines = [f"  {k}: {v}" for k, v in data.items()]
-    return "Stored memories:\n" + "\n".join(lines)
+def read_user_memory(_ctx: dict = None) -> str:
+    from bujji.identity import read_user_file
+    return read_user_file(_ctx["workspace"])
 
 
-# ── Public loader (called by agent.py to inject memory into system prompt) ────
-
-def load_memory_summary(workspace: Path) -> str:
-    """
-    Returns a compact memory block for injection into the system prompt.
-    Called once per AgentLoop init — zero overhead after that.
-    """
-    path = workspace / "memory.json"
-    if not path.exists():
-        return ""
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        if not data:
-            return ""
-        lines = [f"  {k}: {v}" for k, v in data.items()]
-        return "# What I Remember About You\n" + "\n".join(lines)
-    except Exception:
-        return ""
+@register_tool(
+    description=(
+        "Update USER.md — your persistent memory about the user. "
+        "Call this whenever the user shares something worth remembering: "
+        "their name, preferences, current projects, tech stack, or any context "
+        "that will be useful in future sessions. "
+        "Pass the COMPLETE new content of USER.md — include existing info plus the new info. "
+        "Write it as natural Markdown, not key-value pairs."
+    ),
+    parameters={
+        "type": "object",
+        "required": ["content"],
+        "properties": {
+            "content": {
+                "type":        "string",
+                "description": (
+                    "The full new content for USER.md. "
+                    "Include everything — existing facts and new ones. "
+                    "Use Markdown headings and bullet points."
+                ),
+            },
+        },
+    },
+)
+def update_user_memory(content: str, _ctx: dict = None) -> str:
+    from bujji.identity import update_user_file
+    return update_user_file(_ctx["workspace"], content)
