@@ -1,27 +1,20 @@
 """
-bujji — Python port of bujji (https://github.com/sipeed/bujji)
-Ultra-lightweight AI assistant. Runs on any system with Python 3.7+ and pip.
+bujji v2 — Ultra-lightweight personal AI assistant.
+Python port of PicoClaw by Sipeed.
 """
 
-__version__ = "0.1.0-python"
+__version__ = "2.0.0"
 __author__  = "bujji Contributors"
 
-LOGO = "========================================================"
+LOGO = "🦞"
 
-# Convenience imports so callers can do:
-#   from bujji import load_config, AgentLoop
-# instead of digging into submodules.
-from bujji.config import load_config, save_config, get_active_provider, workspace_path
-from bujji.agent  import AgentLoop, HeartbeatService, CronService
+from bujji.config  import load_config, save_config, get_active_provider, workspace_path
+from bujji.agent   import AgentLoop, HeartbeatService, CronService
+from bujji.session import SessionManager
 
 __all__ = [
-    "LOGO",
-    "__version__",
-    "load_config",
-    "save_config",
-    "get_active_provider",
-    "workspace_path",
-    "AgentLoop",
-    "HeartbeatService",
-    "CronService",
+    "LOGO", "__version__",
+    "load_config", "save_config", "get_active_provider", "workspace_path",
+    "AgentLoop", "HeartbeatService", "CronService",
+    "SessionManager",
 ]

@@ -1,51 +1,39 @@
 """
 bujji/tools — Tool registry and built-in tools.
 
-Built-in tools (auto-discovered on import):
-    web_search      Brave Search API
-    read_file       Read a file from disk
-    write_file      Write a file to disk
-    list_files      List directory contents
-    delete_file     Delete a file or directory
-    exec            Run a shell command
-    get_time        Get the current date/time
-    message         Send a message to the user
-    remember        Save a fact to persistent memory
-    recall          Look up a fact from persistent memory
-    forget          Delete a fact from persistent memory
-    list_memories   Show all stored memories
+Built-in tools (auto-discovered via @register_tool):
+    exec                Run a shell command
+    read_file           Read a file from disk
+    write_file          Write (overwrite) a file
+    append_file         Append text to a file
+    list_files          List directory contents
+    delete_file         Delete a file or directory
+    web_search          Brave Search API
+    get_time            Current date and time
+    message             Push a message to the user
+    read_user_memory    Read USER.md (persistent memory)
+    append_user_memory  Add new facts to USER.md (safe, non-destructive)
+    update_user_memory  Replace USER.md entirely
 
 Adding a new tool
 ─────────────────
 1. Create bujji/tools/mytool.py
-2. Decorate your function with @register_tool(description, parameters)
-3. Done — ToolRegistry discovers it automatically on next run.
+2. Decorate with @register_tool(description, parameters)
+3. That's it — ToolRegistry picks it up automatically (hot-reload included)
 """
 
-from bujji.tools.base     import ToolRegistry, register_tool
-
-# Force import of all built-in tool modules so their @register_tool
-# decorators fire even if ToolRegistry hasn't been instantiated yet.
-from bujji.tools.file_ops import read_file, write_file, list_files, delete_file
+from bujji.tools.base     import ToolRegistry, register_tool, ToolContext
+from bujji.tools.file_ops import read_file, write_file, append_file, list_files, delete_file
 from bujji.tools.shell    import exec
 from bujji.tools.web      import web_search
 from bujji.tools.utils    import get_time, message
-from bujji.tools.memory   import read_user_memory, update_user_memory
+from bujji.tools.memory   import read_user_memory, append_user_memory, update_user_memory
 
 __all__ = [
-    # Registry
-    "ToolRegistry",
-    "register_tool",
-    # Built-in tools
-    "read_file",
-    "write_file",
-    "list_files",
-    "delete_file",
+    "ToolRegistry", "register_tool", "ToolContext",
+    "read_file", "write_file", "append_file", "list_files", "delete_file",
     "exec",
     "web_search",
-    "get_time",
-    "message",
-    # Memory (USER.md)
-    "read_user_memory",
-    "update_user_memory",
+    "get_time", "message",
+    "read_user_memory", "append_user_memory", "update_user_memory",
 ]

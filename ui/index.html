@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>bujji 🦞</title>
+<style>
+:root{
+  --bg:#0d0f18;--surface:#13161f;--surface2:#1b1f2e;--surface3:#222640;
+  --border:#2a2f47;--accent:#6c63ff;--accent2:#a89cff;--accent3:#c4bbff;
+  --text:#e4e6f4;--muted:#6b7280;--muted2:#9399b0;
+  --green:#34d399;--yellow:#fbbf24;--red:#f87171;--blue:#60a5fa;
+  --user-bg:#2d2060;--bot-bg:#13161f;
+  --radius:12px;--font:'Inter',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px}
+
+/* ── Layout ── */
+.app{display:flex;height:100vh}
+
+/* ── Sidebar ── */
+.sidebar{
+  width:220px;min-width:220px;background:var(--surface);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;
+  transition:width .2s,min-width .2s
+}
+.sidebar.slim{width:54px;min-width:54px}
+.sidebar.slim .lbl,.sidebar.slim .logo-text{display:none}
+.sidebar-header{
+  padding:14px 16px;display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--border);cursor:pointer;user-select:none
+}
+.logo-emoji{font-size:22px;flex-shrink:0}
+.logo-text{font-size:17px;font-weight:700;color:var(--accent2);letter-spacing:-.5px}
+.nav{flex:1;padding:6px 0;overflow-y:auto}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:9px 16px;
+  cursor:pointer;color:var(--muted);font-size:13px;font-weight:500;
+  transition:background .12s,color .12s;position:relative
+}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--surface2);color:var(--accent2)}
+.nav-item.active::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;
+  width:3px;background:var(--accent);border-radius:0 2px 2px 0
+}
+.nav-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.nav-badge{
+  margin-left:auto;background:var(--green);color:#000;
+  font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px
+}
+.nav-badge.warn{background:var(--yellow)}
+.nav-badge.off{background:var(--surface3);color:var(--muted)}
+.sidebar-footer{padding:10px 16px;border-top:1px solid var(--border)}
+.ver{font-size:11px;color:var(--muted)}
+
+/* ── Main ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.panel{display:none;flex-direction:column;flex:1;overflow:hidden}
+.panel.active{display:flex}
+
+/* ── Chat ── */
+.chat-topbar{
+  padding:12px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);flex-shrink:0
+}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.status-pill{
+  display:flex;align-items:center;gap:6px;padding:4px 10px;
+  border-radius:20px;background:var(--surface2);border:1px solid var(--border);
+  font-size:12px;color:var(--muted)
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0}
+.dot.ok{background:var(--green)}
+.dot.warn{background:var(--yellow)}
+.dot.err{background:var(--red)}
+.messages{
+  flex:1;overflow-y:auto;padding:20px;
+  display:flex;flex-direction:column;gap:12px
+}
+.msg{display:flex;flex-direction:column;gap:4px;max-width:82%}
+.msg.user{align-self:flex-end;align-items:flex-end}
+.msg.bot {align-self:flex-start}
+.bubble{
+  padding:10px 14px;border-radius:var(--radius);
+  line-height:1.65;word-wrap:break-word;white-space:pre-wrap
+}
+.msg.user .bubble{
+  background:var(--user-bg);
+  border-radius:var(--radius) var(--radius) 4px var(--radius)
+}
+.msg.bot .bubble{
+  background:var(--bot-bg);border:1px solid var(--border);
+  border-radius:var(--radius) var(--radius) var(--radius) 4px
+}
+.msg-time{font-size:11px;color:var(--muted);padding:0 4px}
+.tool-card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;overflow:hidden;font-size:12px;
+  margin:4px 0;max-width:460px
+}
+.tool-head{
+  padding:7px 12px;display:flex;align-items:center;gap:8px;
+  cursor:pointer;user-select:none;transition:background .12s
+}
+.tool-head:hover{background:rgba(108,99,255,.08)}
+.tool-fname{font-weight:600;color:var(--accent2)}
+.tool-st{margin-left:auto;font-size:11px;color:var(--muted)}
+.tool-body{
+  padding:8px 12px;border-top:1px solid var(--border);
+  display:none;font-family:monospace;font-size:11px
+}
+.tool-body.open{display:block}
+.tool-args{color:var(--yellow);white-space:pre-wrap}
+.tool-res{color:var(--green);white-space:pre-wrap;max-height:120px;overflow-y:auto;margin-top:6px}
+.typing{display:flex;gap:4px;padding:10px 14px;align-items:center}
+.typing span{
+  width:7px;height:7px;background:var(--muted);border-radius:50%;
+  animation:bounce 1.2s infinite
+}
+.typing span:nth-child(2){animation-delay:.2s}
+.typing span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+.input-row{
+  padding:12px 20px;border-top:1px solid var(--border);
+  background:var(--surface);display:flex;gap:10px;align-items:flex-end;flex-shrink:0
+}
+#msg-input{
+  flex:1;background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);padding:10px 14px;border-radius:10px;resize:none;
+  outline:none;font-family:var(--font);font-size:14px;line-height:1.5;
+  min-height:42px;max-height:130px;transition:border-color .15s
+}
+#msg-input:focus{border-color:var(--accent)}
+#msg-input::placeholder{color:var(--muted)}
+.btn-send{
+  background:var(--accent);color:#fff;border:none;
+  padding:0 18px;height:42px;border-radius:10px;cursor:pointer;
+  font-size:16px;flex-shrink:0;transition:background .15s;
+  display:flex;align-items:center;justify-content:center
+}
+.btn-send:hover{background:#5a52e0}
+.btn-send:disabled{background:var(--muted);cursor:not-allowed}
+
+/* ── Setup / Settings ── */
+.panel-scroll{flex:1;overflow-y:auto;padding:24px 28px}
+.panel-title{font-size:20px;font-weight:700;margin-bottom:6px}
+.panel-sub{font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.6}
+
+/* Setup wizard */
+.wizard-steps{
+  display:flex;gap:0;margin-bottom:32px;
+  border-bottom:1px solid var(--border);padding-bottom:0
+}
+.w-step{
+  padding:8px 16px;font-size:12px;color:var(--muted);cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-1px;user-select:none;
+  transition:color .15s,border-color .15s
+}
+.w-step.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.w-step.done{color:var(--green)}
+.w-page{display:none}
+.w-page.active{display:block}
+
+/* Cards */
+.card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:20px;margin-bottom:16px
+}
+.card-title{
+  font-size:14px;font-weight:600;margin-bottom:16px;
+  display:flex;align-items:center;gap:8px
+}
+.card-title .badge{
+  font-size:11px;font-weight:500;padding:2px 8px;border-radius:10px;
+  background:var(--surface3);color:var(--muted)
+}
+.card-title .badge.ok{background:rgba(52,211,153,.15);color:var(--green)}
+.card-title .badge.warn{background:rgba(251,191,36,.12);color:var(--yellow)}
+
+/* Form elements */
+.form-group{margin-bottom:14px}
+.form-group:last-child{margin-bottom:0}
+label{display:block;font-size:12px;color:var(--muted2);margin-bottom:5px;font-weight:500}
+.field{
+  width:100%;background:var(--surface);border:1px solid var(--border);
+  color:var(--text);padding:9px 12px;border-radius:8px;outline:none;
+  font-family:var(--font);font-size:13px;transition:border-color .15s
+}
+.field:focus{border-color:var(--accent)}
+.field::placeholder{color:var(--muted)}
+select.field option{background:var(--surface)}
+.field-row{display:flex;gap:8px}
+.field-row .field{flex:1}
+.hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
+.hint a{color:var(--accent2);text-decoration:none}
+.hint a:hover{text-decoration:underline}
+
+/* Toggle */
+.toggle-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;margin-bottom:14px;cursor:pointer
+}
+.toggle-row:hover{border-color:var(--accent)}
+.toggle-label{font-size:13px;font-weight:500}
+.toggle-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.toggle{
+  width:36px;height:20px;border-radius:10px;background:var(--surface3);
+  position:relative;transition:background .2s;flex-shrink:0
+}
+.toggle.on{background:var(--accent)}
+.toggle::after{
+  content:'';position:absolute;width:14px;height:14px;
+  background:#fff;border-radius:50%;top:3px;left:3px;transition:left .2s
+}
+.toggle.on::after{left:19px}
+
+/* Model suggestions */
+.model-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{
+  padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;
+  background:var(--surface3);border:1px solid var(--border);color:var(--muted2);
+  transition:all .12s
+}
+.chip:hover{border-color:var(--accent);color:var(--accent2)}
+
+/* Buttons */
+.btn{
+  padding:9px 20px;border-radius:9px;cursor:pointer;font-size:13px;
+  font-weight:600;border:none;transition:all .15s;display:inline-flex;
+  align-items:center;gap:7px
+}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#5a52e0}
+.btn-primary:disabled{background:var(--muted);cursor:not-allowed}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--accent2);color:var(--accent2)}
+.btn-success{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.btn-danger{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-row{display:flex;gap:8px;align-items:center;margin-top:16px;flex-wrap:wrap}
+.verify-result{font-size:12px;padding:7px 12px;border-radius:7px;margin-top:8px;display:none}
+.verify-result.ok {background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:var(--green)}
+.verify-result.err{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:var(--red)}
+
+/* Memory */
+#memory-editor{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);padding:14px;border-radius:10px;resize:none;outline:none;
+  font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px;line-height:1.8;
+  height:calc(100vh - 220px);transition:border-color .15s
+}
+#memory-editor:focus{border-color:var(--accent)}
+
+/* Skills */
+.skill-card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;overflow:hidden;margin-bottom:12px
+}
+.skill-head{
+  padding:12px 16px;display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;user-select:none
+}
+.skill-head:hover{background:rgba(108,99,255,.05)}
+.skill-name{font-weight:600;font-size:13px}
+.skill-body{padding:12px 16px;border-top:1px solid var(--border);display:none}
+.skill-body.open{display:block}
+.skill-body pre{white-space:pre-wrap;font-size:11px;color:var(--muted);font-family:monospace;line-height:1.6}
+
+/* Tools */
+.tool-row{display:flex;align-items:flex-start;gap:12px;padding:14px;border-bottom:1px solid var(--border)}
+.tool-row:last-child{border-bottom:none}
+.tool-name{font-weight:600;font-size:13px;color:var(--accent2);margin-bottom:2px}
+.tool-desc{font-size:12px;color:var(--muted);line-height:1.5}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:10px;
+  font-size:13px;opacity:0;transform:translateY(8px);transition:all .25s;
+  pointer-events:none;z-index:999;background:var(--surface2);border:1px solid var(--border)
+}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.ok {border-color:var(--green);color:var(--green)}
+.toast.err{border-color:var(--red);color:var(--red)}
+
+/* Empty */
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-ico{font-size:38px;margin-bottom:10px}
+.empty p{line-height:1.7;font-size:13px}
+
+/* Config file badge */
+.cfg-path{
+  font-size:11px;color:var(--muted);font-family:monospace;
+  background:var(--surface3);padding:3px 8px;border-radius:4px;
+  display:inline-block;margin-top:6px
+}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* Code in chat */
+code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:92%;color:var(--accent2)}
+.bubble pre{background:#0a0c14;padding:10px 12px;border-radius:8px;overflow-x:auto;margin:6px 0;border:1px solid var(--border)}
+.bubble pre code{background:none;padding:0}
+
+@media(max-width:600px){
+  .sidebar{width:54px;min-width:54px}
+  .lbl,.logo-text{display:none!important}
+  .msg{max-width:94%}
+  .panel-scroll{padding:16px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ── Sidebar ── -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header" onclick="toggleSidebar()">
+    <span class="logo-emoji">🦞</span>
+    <span class="logo-text lbl">bujji</span>
+  </div>
+  <nav class="nav">
+    <div class="nav-item active" id="nav-chat"     onclick="go('chat')">
+      <span class="nav-icon">💬</span><span class="lbl">Chat</span>
+    </div>
+    <div class="nav-item"        id="nav-setup"    onclick="go('setup')">
+      <span class="nav-icon">⚙️</span><span class="lbl">Setup</span>
+      <span class="nav-badge warn lbl" id="setup-badge" style="display:none">!</span>
+    </div>
+    <div class="nav-item"        id="nav-channels" onclick="go('channels')">
+      <span class="nav-icon">📡</span><span class="lbl">Channels</span>
+    </div>
+    <div class="nav-item"        id="nav-memory"   onclick="go('memory')">
+      <span class="nav-icon">🧠</span><span class="lbl">Memory</span>
+    </div>
+    <div class="nav-item"        id="nav-skills"   onclick="go('skills')">
+      <span class="nav-icon">📚</span><span class="lbl">Skills</span>
+    </div>
+    <div class="nav-item"        id="nav-tools"    onclick="go('tools')">
+      <span class="nav-icon">🔧</span><span class="lbl">Tools</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="ver lbl" id="cfg-loc">bujji v2</div>
+  </div>
+</div>
+
+<!-- ── Main ── -->
+<div class="main">
+
+  <!-- CHAT -->
+  <div class="panel active" id="panel-chat">
+    <div class="chat-topbar">
+      <div class="topbar-left">
+        <div class="status-pill" id="status-pill">
+          <div class="dot" id="status-dot"></div>
+          <span id="status-txt">Connecting…</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="go('setup')">⚙ Setup</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearChat()">Clear</button>
+      </div>
+    </div>
+    <div class="messages" id="messages">
+      <div class="empty" id="chat-empty">
+        <div class="empty-ico">🦞</div>
+        <p>Hey! I'm bujji.<br>Ask me anything — I have tools for web search,<br>files, shell commands and more.</p>
+      </div>
+    </div>
+    <div class="input-row">
+      <textarea id="msg-input" rows="1"
+        placeholder="Message bujji… (Enter to send, Shift+Enter for newline)"
+        onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="btn-send" id="btn-send" onclick="sendMessage()">➤</button>
+    </div>
+  </div>
+
+  <!-- SETUP (LLM Provider) -->
+  <div class="panel" id="panel-setup">
+    <div class="panel-scroll">
+      <div class="panel-title">⚙️ Setup</div>
+      <p class="panel-sub">Configure your LLM provider. All settings are saved to <span id="cfg-path-display" class="cfg-path">~/.bujji/config.json</span></p>
+
+      <div class="card">
+        <div class="card-title">
+          🤖 LLM Provider
+          <span class="badge" id="llm-badge">not configured</span>
+        </div>
+
+        <div class="form-group">
+          <label>Provider</label>
+          <select class="field" id="s-provider" onchange="onProviderChange()">
+            <option value="openrouter">OpenRouter — all models, free tier</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="groq">Groq — free, very fast</option>
+            <option value="google">Google — Gemini, free tier</option>
+            <option value="mistral">Mistral</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="ollama">Ollama — local, no API key</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="apikey-group">
+          <label>API Key</label>
+          <input type="password" class="field" id="s-apikey" placeholder="Paste your key here…" autocomplete="off">
+          <div class="hint" id="key-link-hint"></div>
+        </div>
+
+        <div class="form-group">
+          <label>Model</label>
+          <input type="text" class="field" id="s-model" placeholder="e.g. gpt-4o-mini">
+          <div class="model-chips" id="model-chips"></div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="saveLLM()">Save LLM settings</button>
+          <button class="btn btn-ghost"   onclick="testLLM()" id="btn-test-llm">Test connection</button>
+          <div id="llm-test-result" class="verify-result"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🔍 Web Search (optional)</div>
+        <div class="form-group">
+          <label>Brave Search API Key</label>
+          <input type="password" class="field" id="s-brave" placeholder="BSA…">
+          <div class="hint">Free: 2,000 queries/month &nbsp;·&nbsp; <a href="https://brave.com/search/api" target="_blank">Get a free key →</a></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-sm" onclick="saveBrave()">Save</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📂 Workspace</div>
+        <div class="form-group">
+          <label>Directory (where memory, skills and cron files live)</label>
+          <input type="text" class="field" id="s-workspace" placeholder="~/.bujji/workspace">
+          <div class="hint">Relative paths are expanded from your home directory.</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-sm" onclick="saveWorkspace()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHANNELS -->
+  <div class="panel" id="panel-channels">
+    <div class="panel-scroll">
+      <div class="panel-title">📡 Channels</div>
+      <p class="panel-sub">Connect bujji to messaging platforms. Each channel is independent — enable only what you need.</p>
+
+      <!-- Telegram -->
+      <div class="card" id="card-telegram">
+        <div class="card-title">
+          ✈️ Telegram
+          <span class="badge off" id="tg-badge">disabled</span>
+        </div>
+
+        <div class="toggle-row" id="tg-toggle-row" onclick="toggleChannel('telegram')">
+          <div>
+            <div class="toggle-label">Enable Telegram bot</div>
+            <div class="toggle-sub">Run: python main.py gateway  to start the bot</div>
+          </div>
+          <div class="toggle" id="tg-toggle"></div>
+        </div>
+
+        <div class="form-group">
+          <label>Bot Token</label>
+          <div class="field-row">
+            <input type="password" class="field" id="tg-token" placeholder="1234567890:AAE…" autocomplete="off">
+            <button class="btn btn-ghost btn-sm" onclick="testTelegram()">Verify</button>
+          </div>
+          <div class="hint">Get a token: open Telegram → <b>@BotFather</b> → /newbot</div>
+          <div id="tg-verify-result" class="verify-result"></div>
+        </div>
+
+        <div class="form-group">
+          <label>Allow From (Telegram User IDs)</label>
+          <input type="text" class="field" id="tg-allowfrom"
+            placeholder="123456789, 987654321 — leave empty to allow everyone">
+          <div class="hint">
+            Find your user ID: open Telegram → <b>@userinfobot</b> → send any message.
+            Comma-separated. Empty = public (anyone can message your bot).
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="saveTelegram()">Save Telegram</button>
+        </div>
+      </div>
+
+      <!-- Discord -->
+      <div class="card" id="card-discord">
+        <div class="card-title">
+          🎮 Discord
+          <span class="badge off" id="dc-badge">disabled</span>
+        </div>
+
+        <div class="toggle-row" onclick="toggleChannel('discord')">
+          <div>
+            <div class="toggle-label">Enable Discord bot</div>
+            <div class="toggle-sub">Requires: pip install discord.py</div>
+          </div>
+          <div class="toggle" id="dc-toggle"></div>
+        </div>
+
+        <div class="form-group">
+          <label>Bot Token</label>
+          <input type="password" class="field" id="dc-token" placeholder="MTI…" autocomplete="off">
+          <div class="hint">
+            Create a bot: <a href="https://discord.com/developers/applications" target="_blank">discord.com/developers</a> → New Application → Bot → Reset Token
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Allow From (Discord User IDs)</label>
+          <input type="text" class="field" id="dc-allowfrom"
+            placeholder="123456789012345678 — leave empty to respond in all allowed channels">
+          <div class="hint">Right-click a username in Discord → Copy User ID (enable Developer Mode in settings).</div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="saveDiscord()">Save Discord</button>
+        </div>
+      </div>
+
+      <div class="card" style="border-style:dashed;background:transparent">
+        <div class="card-title" style="color:var(--muted)">➕ More channels</div>
+        <p style="font-size:12px;color:var(--muted);line-height:1.7">
+          Add WhatsApp, Slack, or any other platform by creating<br>
+          <code>bujji/connections/slack.py</code> with a <code>.run()</code> method<br>
+          and wiring it into <code>main.py cmd_gateway()</code>.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MEMORY -->
+  <div class="panel" id="panel-memory">
+    <div class="panel-scroll" style="display:flex;flex-direction:column;height:100%;padding-bottom:16px">
+      <div class="panel-title">🧠 Memory</div>
+      <p class="panel-sub" style="margin-bottom:14px">
+        What bujji knows about you — persists across sessions.<br>
+        bujji updates this automatically; you can also edit it directly.
+      </p>
+      <textarea id="memory-editor" spellcheck="false"
+        placeholder="No memory yet. Start chatting and bujji will learn about you."></textarea>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveMemory()">Save memory</button>
+        <button class="btn btn-ghost"   onclick="loadMemory()">↺ Reload</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SKILLS -->
+  <div class="panel" id="panel-skills">
+    <div class="panel-scroll">
+      <div class="panel-title">📚 Skills</div>
+      <p class="panel-sub">
+        Skills are Markdown files that shape bujji's behaviour for specific domains.<br>
+        Create <code>workspace/skills/MY_SKILL/SKILL.md</code> — bujji picks it up instantly, no restart needed.
+      </p>
+      <div id="skills-list">
+        <div class="empty"><div class="empty-ico">📂</div><p>No skills loaded yet.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOOLS -->
+  <div class="panel" id="panel-tools">
+    <div class="panel-scroll">
+      <div class="panel-title">🔧 Active Tools</div>
+      <p class="panel-sub">
+        Tools give bujji hands. Add one by creating <code>bujji/tools/mytool.py</code> with <code>@register_tool</code>.
+      </p>
+      <div id="tools-list">
+        <div class="empty"><div class="empty-ico">🔧</div><p>Loading…</p></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- .main -->
+</div><!-- .app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+const SESSION_ID = 'web:' + Math.random().toString(36).slice(2,10)
+
+const PROVIDER_API_BASES = {
+  openrouter: 'https://openrouter.ai/api/v1',
+  openai:     'https://api.openai.com/v1',
+  anthropic:  'https://api.anthropic.com/v1',
+  groq:       'https://api.groq.com/openai/v1',
+  google:     'https://generativelanguage.googleapis.com/v1beta/openai',
+  mistral:    'https://api.mistral.ai/v1',
+  deepseek:   'https://api.deepseek.com/v1',
+  ollama:     'http://localhost:11434/v1',
+}
+const PROVIDER_DEFAULT_MODEL = {
+  openrouter: 'openai/gpt-4o-mini',
+  openai:     'gpt-4o-mini',
+  anthropic:  'claude-3-haiku-20240307',
+  groq:       'llama3-8b-8192',
+  google:     'gemini-2.0-flash',
+  mistral:    'mistral-small-latest',
+  deepseek:   'deepseek-chat',
+  ollama:     'llama3.2',
+}
+const PROVIDER_KEY_LINKS = {
+  openrouter: ['https://openrouter.ai/keys',                       'Get free key →'],
+  openai:     ['https://platform.openai.com/api-keys',             'Get key →'],
+  anthropic:  ['https://console.anthropic.com/settings/keys',      'Get key →'],
+  groq:       ['https://console.groq.com/keys',                    'Get free key →'],
+  google:     ['https://aistudio.google.com/app/apikey',           'Get free key →'],
+  mistral:    ['https://console.mistral.ai/api-keys',              'Get key →'],
+  deepseek:   ['https://platform.deepseek.com/api-keys',           'Get key →'],
+  ollama:     [null, 'No key needed — runs locally'],
+}
+const POPULAR_MODELS = {
+  openrouter: ['openai/gpt-4o-mini','anthropic/claude-3-5-haiku','google/gemini-2.0-flash','meta-llama/llama-3.1-8b-instruct:free'],
+  openai:     ['gpt-4o-mini','gpt-4o','gpt-4-turbo'],
+  anthropic:  ['claude-3-haiku-20240307','claude-3-5-haiku-20241022','claude-3-5-sonnet-20241022'],
+  groq:       ['llama3-8b-8192','llama-3.1-70b-versatile','mixtral-8x7b-32768'],
+  google:     ['gemini-2.0-flash','gemini-2.0-flash-lite','gemini-1.5-pro','gemini-2.5-pro-preview-03-25'],
+  mistral:    ['mistral-small-latest','mistral-large-latest','codestral-latest'],
+  deepseek:   ['deepseek-chat','deepseek-reasoner'],
+  ollama:     ['llama3.2','llama3.1','mistral','gemma2','qwen2.5','phi3'],
+}
+
+// ── State ──────────────────────────────────────────────────────────────────
+let streaming = false
+let _rawCfg   = {}  // live copy of config from server
+
+// ── Init ───────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadRawConfig()
+  checkStatus()
+  setInterval(checkStatus, 12000)
+})
+
+async function loadRawConfig() {
+  try {
+    const r = await fetch('/api/config/raw')
+    _rawCfg = await r.json()
+    populateForms(_rawCfg)
+  } catch(e) {
+    console.warn('Could not load config', e)
+  }
+}
+
+function populateForms(cfg) {
+  // LLM
+  const providers = cfg.providers || {}
+  const pnames    = Object.keys(providers)
+  const pname     = pnames[0] || 'openrouter'
+  const pcfg      = providers[pname] || {}
+  document.getElementById('s-provider').value = pname
+  document.getElementById('s-apikey').value   = pcfg.api_key || ''
+  document.getElementById('s-model').value    = cfg.agents?.defaults?.model || ''
+  document.getElementById('s-brave').value    = cfg.tools?.web?.search?.api_key || ''
+  document.getElementById('s-workspace').value = cfg.agents?.defaults?.workspace || ''
+  onProviderChange()
+
+  // Telegram
+  const tg = cfg.channels?.telegram || {}
+  document.getElementById('tg-token').value     = tg.token || ''
+  document.getElementById('tg-allowfrom').value = (tg.allow_from || []).join(', ')
+  setToggleUI('telegram', tg.enabled || false)
+
+  // Discord
+  const dc = cfg.channels?.discord || {}
+  document.getElementById('dc-token').value     = dc.token || ''
+  document.getElementById('dc-allowfrom').value = (dc.allow_from || []).join(', ')
+  setToggleUI('discord', dc.enabled || false)
+
+  // Config path display
+  const el = document.getElementById('cfg-path-display')
+  if (el) el.textContent = '~/.bujji/config.json'
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+function go(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
+  document.getElementById('panel-' + name).classList.add('active')
+  document.getElementById('nav-'   + name).classList.add('active')
+  if (name === 'memory')   loadMemory()
+  if (name === 'skills')   loadSkills()
+  if (name === 'tools')    loadTools()
+  if (name === 'channels') refreshChannelBadges()
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('slim')
+}
+
+// ── Status ─────────────────────────────────────────────────────────────────
+async function checkStatus() {
+  try {
+    const r = await fetch('/api/status')
+    const d = await r.json()
+    const dot = document.getElementById('status-dot')
+    const txt = document.getElementById('status-txt')
+    const badge = document.getElementById('setup-badge')
+    const llmBadge = document.getElementById('llm-badge')
+
+    if (d.configured) {
+      dot.className = 'dot ok'
+      txt.textContent = `${d.provider} · ${d.model}`
+      if (badge) badge.style.display = 'none'
+      if (llmBadge) { llmBadge.textContent = 'configured'; llmBadge.className = 'badge ok' }
+    } else {
+      dot.className = 'dot warn'
+      txt.textContent = 'Not configured — go to Setup'
+      if (badge) badge.style.display = ''
+      if (llmBadge) { llmBadge.textContent = 'not configured'; llmBadge.className = 'badge warn' }
+    }
+
+    // Channel badges
+    const tgBadge = document.getElementById('tg-badge')
+    const dcBadge = document.getElementById('dc-badge')
+    if (tgBadge) updateChannelBadge(tgBadge, d.telegram)
+    if (dcBadge) updateChannelBadge(dcBadge, d.discord)
+
+  } catch {
+    document.getElementById('status-dot').className = 'dot err'
+    document.getElementById('status-txt').textContent = 'Server offline'
+  }
+}
+
+function updateChannelBadge(el, info) {
+  if (!info) return
+  if (info.enabled && info.has_token) {
+    el.textContent = 'enabled'; el.className = 'badge ok'
+  } else if (info.has_token) {
+    el.textContent = 'token set, disabled'; el.className = 'badge warn'
+  } else {
+    el.textContent = 'disabled'; el.className = 'badge off'
+  }
+}
+
+function refreshChannelBadges() {
+  checkStatus()
+}
+
+// ── Setup — LLM ────────────────────────────────────────────────────────────
+function onProviderChange() {
+  const p    = document.getElementById('s-provider').value
+  const link = PROVIDER_KEY_LINKS[p]
+  const hint = document.getElementById('key-link-hint')
+  const apig = document.getElementById('apikey-group')
+  const chips= document.getElementById('model-chips')
+
+  if (p === 'ollama') {
+    apig.style.opacity = '.5'
+    document.getElementById('s-apikey').placeholder = 'ollama (no key needed)'
+    hint.innerHTML = link[1]
+  } else {
+    apig.style.opacity = '1'
+    document.getElementById('s-apikey').placeholder = 'Paste your key here…'
+    hint.innerHTML = link[0]
+      ? `<a href="${link[0]}" target="_blank">${link[1]}</a>`
+      : link[1]
+  }
+
+  const m = POPULAR_MODELS[p] || []
+  chips.innerHTML = m.map(x =>
+    `<span class="chip" onclick="pickModel('${x}')">${x}</span>`
+  ).join('')
+
+  if (!document.getElementById('s-model').value) {
+    document.getElementById('s-model').placeholder = PROVIDER_DEFAULT_MODEL[p] || ''
+  }
+}
+
+function pickModel(m) {
+  document.getElementById('s-model').value = m
+}
+
+async function saveLLM() {
+  const p   = document.getElementById('s-provider').value
+  const key = document.getElementById('s-apikey').value.trim()
+  const mdl = document.getElementById('s-model').value.trim() || PROVIDER_DEFAULT_MODEL[p]
+  const base = PROVIDER_API_BASES[p] || ''
+
+  const body = {
+    providers: { [p]: { api_key: key || 'ollama', api_base: base } },
+    agents:    { defaults: { model: mdl } },
+  }
+  await saveConfig(body, 'LLM settings saved ✓')
+  checkStatus()
+}
+
+async function testLLM() {
+  const btn = document.getElementById('btn-test-llm')
+  const res = document.getElementById('llm-test-result')
+  btn.disabled = true
+  btn.textContent = 'Testing…'
+  res.style.display = 'none'
+  try {
+    const r = await fetch('/api/config/test-llm', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
+    const d = await r.json()
+    res.style.display = 'block'
+    if (d.ok) {
+      res.className = 'verify-result ok'
+      res.textContent = `✓ Connected to ${d.model}${d.preview ? ' — "' + d.preview + '"' : ''}`
+    } else {
+      res.className = 'verify-result err'
+      res.textContent = '✗ ' + d.error
+    }
+  } catch(e) {
+    res.style.display = 'block'
+    res.className = 'verify-result err'
+    res.textContent = '✗ ' + e.message
+  } finally {
+    btn.disabled = false
+    btn.textContent = 'Test connection'
+  }
+}
+
+async function saveBrave() {
+  const key = document.getElementById('s-brave').value.trim()
+  await saveConfig({tools:{web:{search:{api_key:key}}}}, 'Brave Search key saved ✓')
+}
+
+async function saveWorkspace() {
+  const ws = document.getElementById('s-workspace').value.trim()
+  if (!ws) { toast('Enter a workspace path', 'err'); return }
+  await saveConfig({agents:{defaults:{workspace:ws}}}, 'Workspace saved ✓')
+}
+
+// ── Channels ───────────────────────────────────────────────────────────────
+function setToggleUI(channel, enabled) {
+  const toggle = document.getElementById(channel === 'telegram' ? 'tg-toggle' : 'dc-toggle')
+  if (toggle) toggle.className = 'toggle' + (enabled ? ' on' : '')
+  const badge  = document.getElementById(channel === 'telegram' ? 'tg-badge' : 'dc-badge')
+  if (badge) {
+    badge.textContent = enabled ? 'enabled' : 'disabled'
+    badge.className   = 'badge ' + (enabled ? 'ok' : 'off')
+  }
+}
+
+function toggleChannel(channel) {
+  const key     = channel === 'telegram' ? 'tg-toggle' : 'dc-toggle'
+  const toggle  = document.getElementById(key)
+  const enabled = !toggle.classList.contains('on')
+  setToggleUI(channel, enabled)
+  const body = {channels:{[channel]:{enabled}}}
+  fetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    .then(() => toast(`${channel} ${enabled ? 'enabled' : 'disabled'}`, 'ok'))
+    .catch(e => toast('Error: ' + e.message, 'err'))
+  // Update local copy
+  if (!_rawCfg.channels) _rawCfg.channels = {}
+  if (!_rawCfg.channels[channel]) _rawCfg.channels[channel] = {}
+  _rawCfg.channels[channel].enabled = enabled
+}
+
+async function testTelegram() {
+  const token = document.getElementById('tg-token').value.trim()
+  if (!token) { toast('Paste a token first', 'err'); return }
+  const res = document.getElementById('tg-verify-result')
+  res.style.display = 'block'
+  res.className = 'verify-result'
+  res.textContent = 'Verifying…'
+  try {
+    const r = await fetch('/api/config/test-telegram', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({token})
+    })
+    const d = await r.json()
+    if (d.ok) {
+      res.className = 'verify-result ok'
+      res.textContent = `✓ Bot: @${d.username} (${d.name})`
+    } else {
+      res.className = 'verify-result err'
+      res.textContent = '✗ ' + d.error
+    }
+  } catch(e) {
+    res.className = 'verify-result err'
+    res.textContent = '✗ ' + e.message
+  }
+}
+
+async function saveTelegram() {
+  const token    = document.getElementById('tg-token').value.trim()
+  const raw      = document.getElementById('tg-allowfrom').value.trim()
+  const allowFrom = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : []
+  const enabled  = document.getElementById('tg-toggle').classList.contains('on')
+  await saveConfig({
+    channels: { telegram: { enabled, token, allow_from: allowFrom } }
+  }, 'Telegram saved ✓')
+  refreshChannelBadges()
+}
+
+async function saveDiscord() {
+  const token    = document.getElementById('dc-token').value.trim()
+  const raw      = document.getElementById('dc-allowfrom').value.trim()
+  const allowFrom = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : []
+  const enabled  = document.getElementById('dc-toggle').classList.contains('on')
+  await saveConfig({
+    channels: { discord: { enabled, token, allow_from: allowFrom } }
+  }, 'Discord saved ✓')
+  refreshChannelBadges()
+}
+
+// ── Memory ─────────────────────────────────────────────────────────────────
+async function loadMemory() {
+  try {
+    const r = await fetch('/api/memory')
+    document.getElementById('memory-editor').value = await r.text()
+  } catch {}
+}
+async function saveMemory() {
+  const content = document.getElementById('memory-editor').value
+  try {
+    const r = await fetch('/api/memory', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({content})
+    })
+    const d = await r.json()
+    toast(d.ok ? 'Memory saved ✓' : 'Save failed', d.ok ? 'ok' : 'err')
+  } catch(e) { toast('Error: ' + e.message, 'err') }
+}
+
+// ── Skills ─────────────────────────────────────────────────────────────────
+async function loadSkills() {
+  const el = document.getElementById('skills-list')
+  try {
+    const r = await fetch('/api/skills')
+    const skills = await r.json()
+    if (!skills.length) {
+      el.innerHTML = `<div class="empty"><div class="empty-ico">📂</div>
+        <p>No skills yet.<br>Create <code>workspace/skills/MY_SKILL/SKILL.md</code><br>— bujji loads it instantly.</p></div>`
+      return
+    }
+    el.innerHTML = skills.map(s => `
+      <div class="skill-card">
+        <div class="skill-head" onclick="this.nextElementSibling.classList.toggle('open')">
+          <span class="skill-name">📗 ${esc(s.name)}</span>
+          <span style="color:var(--muted);font-size:12px">▾</span>
+        </div>
+        <div class="skill-body">
+          <pre>${esc(s.content)}</pre>
+        </div>
+      </div>`).join('')
+  } catch(e) { el.innerHTML = `<div class="empty"><p>Error: ${esc(e.message)}</p></div>` }
+}
+
+// ── Tools ──────────────────────────────────────────────────────────────────
+async function loadTools() {
+  const el = document.getElementById('tools-list')
+  try {
+    const r = await fetch('/api/tools')
+    const tools = await r.json()
+    if (!tools.length) {
+      el.innerHTML = '<div class="empty"><div class="empty-ico">🔧</div><p>No tools found.</p></div>'
+      return
+    }
+    el.innerHTML = `<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">` +
+      tools.map(t => `
+        <div class="tool-row">
+          <div>
+            <div class="tool-name">${esc(t.name)}</div>
+            <div class="tool-desc">${esc(t.description)}</div>
+          </div>
+        </div>`).join('') + `</div>`
+  } catch(e) { el.innerHTML = `<div class="empty"><p>Error: ${esc(e.message)}</p></div>` }
+}
+
+// ── Chat ───────────────────────────────────────────────────────────────────
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
+}
+function autoResize(el) {
+  el.style.height = 'auto'
+  el.style.height = Math.min(el.scrollHeight, 130) + 'px'
+}
+
+async function sendMessage() {
+  if (streaming) return
+  const input = document.getElementById('msg-input')
+  const text  = input.value.trim()
+  if (!text) return
+  input.value = ''; input.style.height = 'auto'
+  document.getElementById('chat-empty').style.display = 'none'
+
+  appendUserMsg(text)
+  const botEl = appendBotMsg()
+  const bubble = botEl.querySelector('.bubble')
+  document.getElementById('btn-send').disabled = true
+  streaming = true
+
+  try {
+    const resp = await fetch('/api/chat', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({message: text, session_id: SESSION_ID})
+    })
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+
+    const reader = resp.body.getReader()
+    const dec    = new TextDecoder()
+    let   buf    = ''
+    let   content = ''
+    let   toolBox = null
+    const typing  = botEl.querySelector('.typing')
+
+    while (true) {
+      const {value, done} = await reader.read()
+      if (done) break
+      buf += dec.decode(value, {stream:true})
+      let nl
+      while ((nl = buf.indexOf('\n\n')) !== -1) {
+        const line = buf.slice(0, nl).trim()
+        buf = buf.slice(nl + 2)
+        if (!line.startsWith('data: ')) continue
+        let evt
+        try { evt = JSON.parse(line.slice(6)) } catch { continue }
+
+        if (evt.type === 'token') {
+          if (typing?.parentNode) typing.remove()
+          content += evt.content
+          bubble.innerHTML = md(content)
+          scrollDown()
+
+        } else if (evt.type === 'tool_start') {
+          if (!toolBox) {
+            toolBox = document.createElement('div')
+            toolBox.style.cssText = 'display:flex;flex-direction:column;gap:5px;margin-top:6px'
+            botEl.appendChild(toolBox)
+          }
+          const card = makeToolCard(evt.name, evt.args, null)
+          card.dataset.n = evt.name
+          toolBox.appendChild(card)
+          scrollDown()
+
+        } else if (evt.type === 'tool_done') {
+          if (toolBox) {
+            const pending = [...toolBox.children].reverse().find(c => c.dataset.n === evt.name && !c.dataset.done)
+            if (pending) {
+              pending.dataset.done = '1'
+              const body = pending.querySelector('.tool-body')
+              const res  = document.createElement('div')
+              res.className = 'tool-res'
+              res.textContent = evt.result
+              body.appendChild(res)
+              pending.querySelector('.tool-st').textContent = '✓ done'
+            }
+          }
+          scrollDown()
+
+        } else if (evt.type === 'error') {
+          if (typing?.parentNode) typing.remove()
+          bubble.innerHTML = `<span style="color:var(--red)">⚠ ${esc(evt.content)}</span>`
+          scrollDown()
+
+        } else if (evt.type === 'done') {
+          if (typing?.parentNode) typing.remove()
+          if (evt.content && !content) bubble.innerHTML = md(evt.content)
+          scrollDown()
+        }
+      }
+    }
+  } catch(e) {
+    botEl.querySelector('.bubble').innerHTML = `<span style="color:var(--red)">⚠ ${esc(e.message)}</span>`
+  } finally {
+    streaming = false
+    document.getElementById('btn-send').disabled = false
+    document.getElementById('msg-input').focus()
+    scrollDown()
+  }
+}
+
+function appendUserMsg(text) {
+  const msgs = document.getElementById('messages')
+  const d = document.createElement('div')
+  d.className = 'msg user'
+  d.innerHTML = `<div class="bubble">${esc(text)}</div>
+    <div class="msg-time">${now()}</div>`
+  msgs.appendChild(d); scrollDown()
+}
+
+function appendBotMsg() {
+  const msgs = document.getElementById('messages')
+  const d = document.createElement('div')
+  d.className = 'msg bot'
+  d.innerHTML = `<div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>
+    <div class="msg-time">${now()}</div>`
+  msgs.appendChild(d); scrollDown()
+  return d
+}
+
+function makeToolCard(name, args, result) {
+  const card = document.createElement('div')
+  card.className = 'tool-card'
+  const argsStr = args ? JSON.stringify(args, null, 2) : ''
+  card.innerHTML = `
+    <div class="tool-head" onclick="this.nextElementSibling.classList.toggle('open')">
+      <span>🔧</span>
+      <span class="tool-fname">${esc(name)}</span>
+      <span class="tool-st">${result ? '✓ done' : '⏳ running…'}</span>
+    </div>
+    <div class="tool-body">
+      ${argsStr ? `<div class="tool-args">${esc(argsStr)}</div>` : ''}
+      ${result  ? `<div class="tool-res">${esc(result)}</div>` : ''}
+    </div>`
+  return card
+}
+
+async function clearChat() {
+  await fetch('/api/clear', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:SESSION_ID})})
+  document.getElementById('messages').innerHTML = `
+    <div class="empty" id="chat-empty">
+      <div class="empty-ico">🦞</div>
+      <p>Chat cleared. Ask me anything!</p>
+    </div>`
+  toast('Chat cleared', 'ok')
+}
+
+// ── Shared save helper ─────────────────────────────────────────────────────
+async function saveConfig(body, successMsg) {
+  try {
+    const r = await fetch('/api/config', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    })
+    const d = await r.json()
+    if (d.ok) {
+      toast(successMsg || 'Saved ✓', 'ok')
+      await loadRawConfig()   // refresh forms so masked fields update
+    } else {
+      toast('Save failed: ' + JSON.stringify(d.error), 'err')
+    }
+  } catch(e) { toast('Error: ' + e.message, 'err') }
+}
+
+// ── Utility ────────────────────────────────────────────────────────────────
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+function now() { return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) }
+function scrollDown() {
+  const m = document.getElementById('messages')
+  m.scrollTop = m.scrollHeight
+}
+function md(text) {
+  let h = esc(text)
+  h = h.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+  h = h.replace(/`([^`\n]+)`/g, '<code>$1</code>')
+  h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+  h = h.replace(/\*(.+?)\*/g, '<em>$1</em>')
+  h = h.replace(/\[(.+?)\]\((https?:\/\/.+?)\)/g, '<a href="$2" target="_blank" style="color:var(--accent2)">$1</a>')
+  h = h.replace(/\n/g, '<br>')
+  return h
+}
+function toast(msg, type='') {
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.className   = `toast ${type} show`
+  setTimeout(() => { t.className = 'toast' }, 3000)
+}
+</script>
+</body>
+</html>
