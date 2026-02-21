@@ -1,4 +1,4 @@
-# 🦞 bujji 
+# bujji 
 
 **Ultra-lightweight personal AI assistant** — runs on a Raspberry Pi, an old Mac, anywhere Python runs.
 Inspired by [PicoClaw](https://github.com/sipeed/picoclaw) by Sipeed. Named after the loyal robot from *Kalki 2898 AD*.
