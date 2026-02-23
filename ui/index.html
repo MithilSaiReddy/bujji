@@ -256,6 +256,36 @@ select.field option{background:var(--surface)}
 #memory-editor:focus{border-color:var(--accent)}
 
 /* Skills */
+@keyframes spin { to { transform: rotate(360deg) } }
+/* Marketplace */
+.mkt-tab{
+  background:none;border:none;color:var(--muted);font-size:13px;font-weight:500;
+  padding:9px 14px;cursor:pointer;border-bottom:2px solid transparent;
+  transition:color .15s,border-color .15s;margin-bottom:-1px
+}
+.mkt-tab:hover{color:var(--text)}
+.mkt-tab.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.catalog-card{
+  background:var(--surface2);border:1px solid var(--border);border-radius:12px;
+  padding:16px;display:flex;flex-direction:column;gap:10px;
+  transition:border-color .15s,transform .1s
+}
+.catalog-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.catalog-card-head{display:flex;align-items:flex-start;gap:10px}
+.catalog-card-icon{font-size:24px;flex-shrink:0;line-height:1}
+.catalog-card-title{font-weight:600;font-size:13px;margin-bottom:3px}
+.catalog-card-desc{font-size:12px;color:var(--muted);line-height:1.5}
+.catalog-card-tags{display:flex;flex-wrap:wrap;gap:5px}
+.tag{background:var(--surface3);color:var(--muted2);font-size:10px;font-weight:600;
+  padding:2px 7px;border-radius:20px;letter-spacing:.3px;text-transform:uppercase}
+.installed-card{
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:10px
+}
+.installed-card-body{flex:1;min-width:0}
+.installed-card-name{font-weight:600;font-size:13px;margin-bottom:4px}
+.installed-card-preview{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.installed-card-actions{display:flex;gap:6px;flex-shrink:0}
 .skill-card{
   background:var(--surface2);border:1px solid var(--border);
   border-radius:10px;overflow:hidden;margin-bottom:12px
@@ -340,7 +370,7 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
       <span class="nav-icon">🧠</span><span class="lbl">Memory</span>
     </div>
     <div class="nav-item"        id="nav-skills"   onclick="go('skills')">
-      <span class="nav-icon">📚</span><span class="lbl">Skills</span>
+      <span class="nav-icon">🧩</span><span class="lbl">Marketplace</span>
     </div>
     <div class="nav-item"        id="nav-tools"    onclick="go('tools')">
       <span class="nav-icon">🔧</span><span class="lbl">Tools</span>
@@ -563,15 +593,78 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
   </div>
 
   <!-- SKILLS -->
+  <!-- SKILLS MARKETPLACE -->
   <div class="panel" id="panel-skills">
-    <div class="panel-scroll">
-      <div class="panel-title">📚 Skills</div>
-      <p class="panel-sub">
-        Skills are Markdown files that shape bujji's behaviour for specific domains.<br>
-        Create <code>workspace/skills/MY_SKILL/SKILL.md</code> — bujji picks it up instantly, no restart needed.
-      </p>
-      <div id="skills-list">
-        <div class="empty"><div class="empty-ico">📂</div><p>No skills loaded yet.</p></div>
+    <div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
+
+      <!-- Header -->
+      <div style="padding:20px 24px 0;flex-shrink:0">
+        <div class="panel-title">🧩 Skills Marketplace</div>
+        <p class="panel-sub">Install skills to shape how bujji behaves. Changes are instant — no restart needed.</p>
+
+        <!-- Tab Bar -->
+        <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:0">
+          <button class="mkt-tab active" id="tab-catalog"   onclick="mktTab('catalog')">🏪 Catalog</button>
+          <button class="mkt-tab"        id="tab-installed" onclick="mktTab('installed')">📦 Installed <span id="installed-count" class="nav-badge" style="margin-left:6px;display:none">0</span></button>
+          <button class="mkt-tab"        id="tab-create"    onclick="mktTab('create')">✏️ Create</button>
+        </div>
+      </div>
+
+      <!-- Scrollable body -->
+      <div style="flex:1;overflow-y:auto;padding:20px 24px">
+
+        <!-- CATALOG -->
+        <div id="mkt-catalog">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;font-size:12px;color:var(--muted)">
+            <span id="catalog-meta"></span>
+            <a id="catalog-gh-link" href="https://github.com/MithilSaiReddy/bujji-skills" target="_blank"
+               style="display:none;color:var(--accent);text-decoration:none;font-weight:600">
+              ↗ Submit a skill on GitHub
+            </a>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px" id="catalog-grid">
+            <div class="empty"><div class="empty-ico">⏳</div><p>Loading…</p></div>
+          </div>
+        </div>
+
+        <!-- INSTALLED -->
+        <div id="mkt-installed" style="display:none">
+          <div id="installed-list"></div>
+        </div>
+
+        <!-- CREATE -->
+        <div id="mkt-create" style="display:none;max-width:680px">
+          <div class="card" style="padding:20px">
+            <label style="display:block;margin-bottom:6px;font-size:13px;font-weight:600">Skill Name <span style="color:var(--muted);font-weight:400">(becomes the folder name, lowercase)</span></label>
+            <input id="create-name" type="text" class="inp" placeholder="e.g. my-writing-assistant" style="margin-bottom:14px">
+
+            <label style="display:block;margin-bottom:6px;font-size:13px;font-weight:600">SKILL.md Content</label>
+            <textarea id="create-content" style="width:100%;height:320px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:12px;resize:vertical;line-height:1.6" placeholder="# Skill: My Writing Assistant&#10;&#10;## When to Use&#10;When the user asks to write, edit, or improve any text.&#10;&#10;## Behavior&#10;- Always ask about the intended audience first&#10;- Match the user's existing tone&#10;- Offer 2–3 alternatives when appropriate&#10;&#10;## Output Format&#10;Return the improved text in a code block, followed by a brief explanation of changes."></textarea>
+
+            <div style="display:flex;gap:10px;margin-top:14px">
+              <button class="btn btn-primary" onclick="createSkill()">💾 Save Skill</button>
+              <button class="btn btn-ghost" onclick="fillTemplate()">📋 Use Template</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Skill Modal -->
+  <div id="edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;width:min(700px,95vw);max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
+      <div style="padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div style="font-weight:700;font-size:15px">✏️ Edit Skill: <span id="edit-modal-name"></span></div>
+        <button class="btn btn-ghost btn-sm" onclick="closeEditModal()">✕</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:18px 20px">
+        <textarea id="edit-content" style="width:100%;height:400px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:12px;resize:vertical;line-height:1.6"></textarea>
+      </div>
+      <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="closeEditModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEditedSkill()">💾 Save Changes</button>
       </div>
     </div>
   </div>
@@ -697,7 +790,7 @@ function go(name) {
   document.getElementById('panel-' + name).classList.add('active')
   document.getElementById('nav-'   + name).classList.add('active')
   if (name === 'memory')   loadMemory()
-  if (name === 'skills')   loadSkills()
+  if (name === 'skills') { renderCatalog(); loadSkills() }
   if (name === 'tools')    loadTools()
   if (name === 'channels') refreshChannelBadges()
 }
@@ -935,29 +1028,254 @@ async function saveMemory() {
 }
 
 // ── Skills ─────────────────────────────────────────────────────────────────
-async function loadSkills() {
-  const el = document.getElementById('skills-list')
-  try {
-    const r = await fetch('/api/skills')
-    const skills = await r.json()
-    if (!skills.length) {
-      el.innerHTML = `<div class="empty"><div class="empty-ico">📂</div>
-        <p>No skills yet.<br>Create <code>workspace/skills/MY_SKILL/SKILL.md</code><br>— bujji loads it instantly.</p></div>`
-      return
-    }
-    el.innerHTML = skills.map(s => `
-      <div class="skill-card">
-        <div class="skill-head" onclick="this.nextElementSibling.classList.toggle('open')">
-          <span class="skill-name">📗 ${esc(s.name)}</span>
-          <span style="color:var(--muted);font-size:12px">▾</span>
-        </div>
-        <div class="skill-body">
-          <pre>${esc(s.content)}</pre>
-        </div>
-      </div>`).join('')
-  } catch(e) { el.innerHTML = `<div class="empty"><p>Error: ${esc(e.message)}</p></div>` }
+// ── Skills Marketplace ─────────────────────────────────────────────────────
+
+const SKILLS_REPO_INDEX = 'https://raw.githubusercontent.com/MithilSaiReddy/bujji-skills/main/index.json'
+
+
+let _catalog         = []
+let _installedSkills = []
+let _editingSkillName = ''
+
+function mktTab(tab) {
+  ['catalog','installed','create'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab)
+    document.getElementById('mkt-'+t).style.display = t===tab ? 'block' : 'none'
+  })
+  if (tab === 'installed') loadSkills()
 }
 
+async function renderCatalog() {
+  const grid = document.getElementById('catalog-grid')
+  grid.innerHTML = '<div class="empty"><div class="empty-ico" style="animation:spin 1s linear infinite">⏳</div><p>Loading from GitHub…</p></div>'
+  try {
+    const r    = await fetch(SKILLS_REPO_INDEX + '?t=' + Date.now(), {signal: AbortSignal.timeout(8000)})
+    if (!r.ok) throw new Error('GitHub returned ' + r.status)
+    const data = await r.json()
+    _catalog   = data.skills || []
+    const age  = data.updated_at ? new Date(data.updated_at).toLocaleDateString() : ''
+    document.getElementById('catalog-meta').textContent = _catalog.length + ' skills • updated ' + age + ' • '
+    document.getElementById('catalog-gh-link').style.display = 'inline'
+    renderCatalogGrid()
+  } catch(e) {
+    grid.innerHTML = '<div class="empty"><div class="empty-ico">⚠️</div><p>Could not load catalog from GitHub.<br><small style="color:var(--muted)">' + esc(e.message) + '</small></p><button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="renderCatalog()">↺ Retry</button></div>'
+  }
+}
+
+function renderCatalogGrid() {
+  const grid = document.getElementById('catalog-grid')
+  if (!_catalog.length) {
+    grid.innerHTML = '<div class="empty"><p>No skills found.</p></div>'
+    return
+  }
+  grid.innerHTML = _catalog.map(s => `
+    <div class="catalog-card" id="ccard-${s.id}">
+      <div class="catalog-card-head">
+        <span style="font-size:26px">${s.icon}</span>
+        <div>
+          <div class="catalog-card-title">${esc(s.title)}</div>
+          <div class="catalog-card-desc">${esc(s.description)}</div>
+        </div>
+      </div>
+      <div class="catalog-card-tags">
+        ${s.tags.map(t=>`<span class="tag">${t}</span>`).join('')}
+        <span class="tag" style="margin-left:auto;opacity:.6">by ${esc(s.author)}</span>
+      </div>
+      <button class="btn btn-primary btn-sm" id="ibtn-${s.id}" onclick="installSkill('${s.id}')">⬇ Install</button>
+    </div>`).join('')
+  refreshCatalogButtons()
+}
+
+function refreshCatalogButtons() {
+  _catalog.forEach(s => {
+    const btn = document.getElementById('ibtn-' + s.id)
+    if (!btn) return
+    const installed = _installedSkills.some(i => i.name === s.id)
+    btn.disabled     = installed
+    btn.textContent  = installed ? '✓ Installed' : '⬇ Install'
+    btn.style.opacity = installed ? '.5' : '1'
+  })
+}
+
+async function installSkill(id) {
+  const skill = _catalog.find(s => s.id === id)
+  if (!skill) return
+  const btn = document.getElementById('ibtn-' + id)
+  if (btn) { btn.disabled = true; btn.textContent = 'Installing…' }
+
+  try {
+    let content = skill.content || null
+
+    // Only fetch from GitHub if no embedded content (community skills from live index)
+    if (!content && skill.skill_url) {
+      if (btn) btn.textContent = 'Fetching…'
+      const mdRes = await fetch(skill.skill_url + '?t=' + Date.now(), {signal: AbortSignal.timeout(8000)})
+      if (!mdRes.ok) throw new Error(`Could not fetch skill from GitHub (${mdRes.status}). Check your internet connection or try again.`)
+      content = await mdRes.text()
+      if (btn) btn.textContent = 'Installing…'
+    }
+
+    if (!content) throw new Error('No skill content available')
+
+    // POST to local bujji server
+    const r = await fetch('/api/skills', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name: skill.id, content})
+    })
+    const d = await r.json()
+    if (d.ok) {
+      toast('✅ ' + skill.title + ' installed! Agent picks it up on next message.')
+      _installedSkills.push({name: skill.id, content})
+      refreshCatalogButtons()
+      updateInstalledCount()
+    } else if (r.status === 409) {
+      toast('ℹ️ Already installed — edit it in the Installed tab')
+      if (btn) btn.textContent = '✓ Installed'
+    } else {
+      throw new Error(d.error || 'Install failed')
+    }
+  } catch(e) {
+    toast('❌ ' + e.message)
+    if (btn) { btn.disabled = false; btn.textContent = '⬇ Install' }
+  }
+}
+
+async function loadSkills() {
+  const el = document.getElementById('installed-list')
+  el.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><p>Loading…</p></div>'
+  try {
+    const r = await fetch('/api/skills')
+    _installedSkills = await r.json()
+    updateInstalledCount()
+    refreshCatalogButtons()
+    if (!_installedSkills.length) {
+      el.innerHTML = `<div class="empty">
+        <div class="empty-ico">📦</div>
+        <p>No skills installed yet.<br>Go to the <b>Catalog</b> tab to install one.</p>
+      </div>`
+      return
+    }
+    el.innerHTML = _installedSkills.map(s => `
+      <div class="installed-card">
+        <div style="font-size:22px">📗</div>
+        <div class="installed-card-body">
+          <div class="installed-card-name">${esc(s.name)}</div>
+          <div class="installed-card-preview">${esc((s.content||'').slice(0,120))}…</div>
+        </div>
+        <div class="installed-card-actions">
+          <button class="btn btn-ghost btn-sm" onclick="openEditModal('${esc(s.name)}', ${JSON.stringify(esc(s.content))})">✏️ Edit</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteSkill('${esc(s.name)}')">🗑 Delete</button>
+        </div>
+      </div>`).join('')
+  } catch(e) {
+    el.innerHTML = `<div class="empty"><p>Error: ${esc(e.message)}</p></div>`
+  }
+}
+
+function updateInstalledCount() {
+  const badge = document.getElementById('installed-count')
+  const n = _installedSkills.length
+  badge.textContent = n
+  badge.style.display = n > 0 ? 'inline-block' : 'none'
+}
+
+async function createSkill() {
+  const name    = document.getElementById('create-name').value.trim().toLowerCase().replace(/\s+/g,'-')
+  const content = document.getElementById('create-content').value.trim()
+  if (!name)    { toast('❌ Enter a skill name'); return }
+  if (!content) { toast('❌ Enter skill content'); return }
+  try {
+    const r = await fetch('/api/skills', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name, content})
+    })
+    const d = await r.json()
+    if (d.ok) {
+      toast('✅ Skill "' + name + '" created! Agent loads it on next message.')
+      document.getElementById('create-name').value    = ''
+      document.getElementById('create-content').value = ''
+      _installedSkills.push({name, content})
+      updateInstalledCount()
+      refreshCatalogButtons()
+    } else {
+      toast('❌ ' + (d.error || 'Create failed'))
+    }
+  } catch(e) { toast('❌ ' + e.message) }
+}
+
+function fillTemplate() {
+  document.getElementById('create-content').value = `# Skill: My Custom Skill
+
+## When to Use
+[Describe the situation that should activate this skill]
+
+## Behavior
+- [Specific instruction 1]
+- [Specific instruction 2]
+- [Always / Never do X]
+
+## Output Format
+[How the agent should format responses when this skill is active]
+
+## Examples
+User: [example request]
+Bujji: [example response]`
+}
+
+function openEditModal(name, content) {
+  _editingSkillName = name
+  document.getElementById('edit-modal-name').textContent = name
+  document.getElementById('edit-content').value = content
+  document.getElementById('edit-modal').style.display = 'flex'
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').style.display = 'none'
+  _editingSkillName = ''
+}
+
+async function saveEditedSkill() {
+  const content = document.getElementById('edit-content').value.trim()
+  if (!content) { toast('❌ Content cannot be empty'); return }
+  try {
+    const r = await fetch('/api/skills/update', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name: _editingSkillName, content})
+    })
+    const d = await r.json()
+    if (d.ok) {
+      toast('✅ Skill updated — agent picks it up instantly')
+      closeEditModal()
+      loadSkills()
+    } else {
+      toast('❌ ' + (d.error || 'Update failed'))
+    }
+  } catch(e) { toast('❌ ' + e.message) }
+}
+
+async function deleteSkill(name) {
+  if (!confirm(`Delete skill "${name}"? This cannot be undone.`)) return
+  try {
+    const r = await fetch('/api/skills/delete', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name})
+    })
+    const d = await r.json()
+    if (d.ok) {
+      toast('🗑 Skill "' + name + '" deleted')
+      _installedSkills = _installedSkills.filter(s => s.name !== name)
+      updateInstalledCount()
+      refreshCatalogButtons()
+      loadSkills()
+    } else {
+      toast('❌ ' + (d.error || 'Delete failed'))
+    }
+  } catch(e) { toast('❌ ' + e.message) }
+}
 // ── Tools ──────────────────────────────────────────────────────────────────
 async function loadTools() {
   const el = document.getElementById('tools-list')

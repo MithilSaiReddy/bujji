@@ -125,6 +125,9 @@ class BujjiHandler(BaseHTTPRequestHandler):
             "/api/memory":               lambda: self._post_memory(body),
             "/api/chat":                 lambda: self._post_chat(body),
             "/api/clear":                lambda: self._post_clear(body),
+            "/api/skills":               lambda: self._post_skill(body),
+            "/api/skills/update":        lambda: self._put_skill(body),
+            "/api/skills/delete":        lambda: self._delete_skill(body),
         }
         fn = routes.get(path)
         if fn:
@@ -290,6 +293,59 @@ class BujjiHandler(BaseHTTPRequestHandler):
         if _mgr:
             _mgr.clear(sid)
         self._send_json({"ok": True})
+
+    def _post_skill(self, body: dict):
+        """Create a new skill — POST /api/skills"""
+        name    = (body.get("name") or "").strip().replace(" ", "-").lower()
+        content = (body.get("content") or "").strip()
+        if not name:
+            self._send_json({"ok": False, "error": "Skill name is required"}, 400)
+            return
+        if not content:
+            self._send_json({"ok": False, "error": "Skill content is required"}, 400)
+            return
+        ws         = workspace_path(_cfg)
+        skill_dir  = ws / "skills" / name
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        skill_file = skill_dir / "SKILL.md"
+        if skill_file.exists():
+            self._send_json({
+                "ok": False,
+                "error": f"Skill '{name}' already exists. Use update to edit it."
+            }, 409)
+            return
+        skill_file.write_text(content, encoding="utf-8")
+        self._send_json({"ok": True, "name": name, "path": str(skill_file)})
+
+    def _put_skill(self, body: dict):
+        """Update an existing skill — POST /api/skills/update"""
+        name    = (body.get("name") or "").strip()
+        content = (body.get("content") or "").strip()
+        if not name or not content:
+            self._send_json({"ok": False, "error": "name and content required"}, 400)
+            return
+        ws         = workspace_path(_cfg)
+        skill_file = ws / "skills" / name / "SKILL.md"
+        if not skill_file.exists():
+            self._send_json({"ok": False, "error": f"Skill '{name}' not found"}, 404)
+            return
+        skill_file.write_text(content, encoding="utf-8")
+        self._send_json({"ok": True, "name": name})
+
+    def _delete_skill(self, body: dict):
+        """Delete a skill directory — POST /api/skills/delete"""
+        import shutil
+        name = (body.get("name") or "").strip()
+        if not name:
+            self._send_json({"ok": False, "error": "name required"}, 400)
+            return
+        ws        = workspace_path(_cfg)
+        skill_dir = ws / "skills" / name
+        if not skill_dir.exists():
+            self._send_json({"ok": False, "error": f"Skill '{name}' not found"}, 404)
+            return
+        shutil.rmtree(skill_dir)
+        self._send_json({"ok": True, "name": name})
 
     def _post_chat(self, body: dict):
         message    = (body.get("message") or "").strip()
