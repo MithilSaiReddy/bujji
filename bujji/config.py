@@ -20,6 +20,7 @@ WORKSPACE_DEFAULT = CONFIG_DIR / "workspace"
 # ─────────────────────────────────────────────────────────────────────────────
 
 DEFAULT_CONFIG = {
+    "active_provider": "",   # name of the provider currently in use
     "agents": {
         "defaults": {
             "workspace":             str(WORKSPACE_DEFAULT),
@@ -149,11 +150,25 @@ def _deep_merge(base: dict, override: dict) -> None:
 
 def get_active_provider(cfg: dict):
     """
-    Return (provider_name, api_key, api_base, model) for the first
-    fully-configured provider, or (None, None, None, None) if none found.
+    Return (provider_name, api_key, api_base, model) for the configured
+    provider, or (None, None, None, None) if none found.
+
+    Priority:
+      1. cfg["active_provider"] — explicitly selected by the user
+      2. First provider in cfg["providers"] with a valid api_key (legacy fallback)
     """
     model_override = cfg["agents"]["defaults"].get("model", "")
-    for pname, pconf in cfg.get("providers", {}).items():
+    providers      = cfg.get("providers", {})
+
+    # Build ordered list: preferred provider first, then the rest
+    preferred = cfg.get("active_provider", "")
+    if preferred and preferred in providers:
+        ordered = [preferred] + [p for p in providers if p != preferred]
+    else:
+        ordered = list(providers)
+
+    for pname in ordered:
+        pconf   = providers[pname]
         api_key = pconf.get("api_key", "")
         if not api_key:
             continue
@@ -163,6 +178,7 @@ def get_active_provider(cfg: dict):
             continue
         model = model_override or pconf.get("model", fallback_model)
         return pname, api_key, api_base, model
+
     return None, None, None, None
 
 
