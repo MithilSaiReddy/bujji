@@ -1,108 +1,371 @@
 """
-bujji/tools/base.py  —  v2
+bujji/tools/base.py  —  v3
+
 ToolContext · register_tool · ToolRegistry
++ param()      — one-liner parameter declaration (kills JSON schema boilerplate)
++ ToolContext.cred()  — clean credential access with friendly missing-key error
++ HttpClient   — zero-boilerplate HTTP for any REST API
 
-
-How to add a new tool
-─────────────────────
-1.  Create a new file in bujji/tools/, e.g. weather.py
-2.  Define your function(s) with a normal Python signature.
-3.  Decorate with @register_tool(description, parameters_schema).
-4.  That's it — the registry picks it up automatically on next run.
-
-Example
-───────
-    # bujji/tools/weather.py
-    from bujji.tools.base import register_tool
-
+──────────────────────────────────────────────────────────────────────────────
+BEFORE (v2):
+──────────────────────────────────────────────────────────────────────────────
     @register_tool(
-        description="Get current weather for a city.",
+        description="Search Notion pages.",
         parameters={
             "type": "object",
-            "required": ["city"],
+            "required": ["query"],
             "properties": {
-                "city": {"type": "string", "description": "City name"}
+                "query":       {"type": "string",  "description": "Search query"},
+                "max_results": {"type": "integer", "description": "Max results"},
             }
         }
     )
-    def get_weather(city: str) -> str:
+    def notion_search(query: str, max_results: int = 5, _ctx: ToolContext = None) -> str:
+        api_key = _ctx.cfg.get("tools", {}).get("notion", {}).get("api_key", "")
+        if not api_key:
+            return "[Notion] API key not configured. Add it in Settings → Tools."
+        import requests
+        r = requests.get("https://api.notion.com/v1/search",
+                         headers={"Authorization": f"Bearer {api_key}",
+                                  "Notion-Version": "2022-06-28"},
+                         json={"query": query, "page_size": max_results},
+                         timeout=10)
+        r.raise_for_status()
         ...
 
-        
-What's new vs v1
-────────────────
-• ToolContext is a typed dataclass — no more fragile _ctx dict
-• Hot-reload   : drop a new .py in tools/ → picked up immediately, no restart
-• Smart truncation : keeps head + tail so the LLM always sees both start and end
-• Callbacks    : on_tool_start / on_tool_done for streaming web UI events
-• Startup validation : all registered tools are sanity-checked at init
-• Structured errors  : every exception becomes a [TOOL ERROR] string the LLM
-                       can reason about instead of crashing silently
+──────────────────────────────────────────────────────────────────────────────
+AFTER (v3):
+──────────────────────────────────────────────────────────────────────────────
+    from bujji.tools.base import register_tool, param, ToolContext, HttpClient
+
+    @register_tool(
+        description="Search Notion pages.",
+        params=[
+            param("query", "Search query"),
+            param("max_results", "Max results to return", type="integer", default=5),
+        ]
+    )
+    def notion_search(query: str, max_results: int = 5, _ctx: ToolContext = None) -> str:
+        notion = HttpClient(
+            base_url = "https://api.notion.com/v1",
+            headers  = {
+                "Authorization":  "Bearer " + _ctx.cred("notion.api_key"),
+                "Notion-Version": "2022-06-28",
+            }
+        )
+        data = notion.post("/search", json={"query": query, "page_size": max_results})
+        ...
+
+That's it. No JSON schema. No manual cred digging. No requests boilerplate.
+See tools/TEMPLATE.py for a full copy-paste starting point.
 """
 from __future__ import annotations
 
 import importlib
 import inspect
-import os
 import pkgutil
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-# ── Typed context injected into every tool ────────────────────────────────────
+_MISSING = object()  # sentinel for param() default detection
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  param() — one-liner parameter declaration
+# ─────────────────────────────────────────────────────────────────────────────
+
+def param(
+    name:        str,
+    description: str,
+    type:        str  = "string",
+    required:    bool = True,
+    default:     Any  = _MISSING,
+    enum:        list | None = None,
+    items:       dict | None = None,
+) -> dict:
+    """
+    Declare a single tool parameter — replaces the verbose JSON schema dict.
+
+    Examples
+    ────────
+    param("query",   "Search query")                          # required string
+    param("limit",   "Max results",  type="integer", default=10)   # optional int
+    param("status",  "Task status",  enum=["open", "closed"])      # enum string
+    param("tags",    "Tag list",     type="array", default=[])     # optional array
+    param("verbose", "Debug output", type="boolean", default=False)
+    """
+    if default is not _MISSING:
+        required = False
+
+    schema: dict = {"type": type, "description": description}
+    if enum:
+        schema["enum"] = enum
+    if type == "array" and items:
+        schema["items"] = items
+    elif type == "array" and not items:
+        schema["items"] = {"type": "string"}  # sensible default
+
+    return {"_name": name, "_required": required, "_schema": schema}
+
+
+def _params_to_schema(params: list[dict]) -> dict:
+    """Convert a list of param() results into an OpenAI-style JSON schema."""
+    properties = {}
+    required   = []
+    for p in params:
+        name = p["_name"]
+        properties[name] = p["_schema"]
+        if p["_required"]:
+            required.append(name)
+    out: dict = {"type": "object", "properties": properties}
+    if required:
+        out["required"] = required
+    return out
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  ToolContext — injected into every tool call
+# ─────────────────────────────────────────────────────────────────────────────
+
+class ToolCredentialError(RuntimeError):
+    """Raised when a required credential is missing. Turned into a helpful string."""
+    pass
+
 
 @dataclass
 class ToolContext:
     cfg:             dict
     workspace:       Path
-    restrict:        bool                             = False
-    send_message_fn: Optional[Callable[[str], None]] = None
-    on_tool_start:   Optional[Callable[[str, dict], None]] = None  # (name, args)
-    on_tool_done:    Optional[Callable[[str, str],  None]] = None  # (name, result)
+    restrict:        bool                                  = False
+    send_message_fn: Optional[Callable[[str], None]]      = None
+    on_tool_start:   Optional[Callable[[str, dict], None]] = None
+    on_tool_done:    Optional[Callable[[str, str],  None]] = None
 
-# ── Global registry ───────────────────────────────────────────────────────────
+    # ── credential helper ─────────────────────────────────────────────────
 
-# name → (callable, openai-function-schema)
-_REGISTRY:      dict[str, tuple[Callable, dict]] = {}
-_MODULE_MTIMES: dict[str, float]                 = {}   # for hot-reload
+    def cred(self, dotpath: str, *, required: bool = True) -> str:
+        """
+        Get a credential from config using dot-notation.
 
-# ── Decorator ─────────────────────────────────────────────────────────────────
+        Credentials live under cfg["tools"][<service>][<key>].
 
-def register_tool(description: str, parameters: dict | None = None):
+        Examples
+        ────────
+        _ctx.cred("notion.api_key")         → cfg["tools"]["notion"]["api_key"]
+        _ctx.cred("gmail.access_token")     → cfg["tools"]["gmail"]["access_token"]
+        _ctx.cred("openweather.api_key")    → cfg["tools"]["openweather"]["api_key"]
+
+        If the value is missing and required=True (default) a ToolCredentialError
+        is raised — which becomes a clean "[Tool] ... not configured" message that
+        the LLM sees and can relay to the user.
+        """
+        parts = dotpath.split(".")
+        if len(parts) != 2:
+            raise ValueError(f"cred() path must be 'service.key', got: '{dotpath}'")
+        service, key = parts
+        value = (
+            self.cfg
+                .get("tools", {})
+                .get(service, {})
+                .get(key, "")
+        )
+        if not value and required:
+            raise ToolCredentialError(
+                f"[{service}] '{key}' not configured.\n"
+                f"  → Add it in the web UI:  Settings → Tools → {service.title()}\n"
+                f"  → Or in config.json:     tools.{service}.{key}"
+            )
+        return value
+
+    def creds(self, service: str) -> dict:
+        """
+        Return all stored credentials for a service as a dict.
+
+        Example
+        ───────
+        keys = _ctx.creds("gmail")
+        # → {"access_token": "...", "refresh_token": "...", ...}
+        """
+        return dict(self.cfg.get("tools", {}).get(service, {}))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  HttpClient — zero-boilerplate REST calls
+# ─────────────────────────────────────────────────────────────────────────────
+
+class HttpClient:
+    """
+    Thin, synchronous HTTP client for REST APIs.
+
+    • Auto-parses JSON responses
+    • Clean error messages (includes status code + body)
+    • Supports base_url so you only write paths in each call
+    • All methods accept arbitrary **kwargs passed to requests
+
+    Usage
+    ─────
+    client = HttpClient(
+        base_url = "https://api.notion.com/v1",
+        headers  = {
+            "Authorization":  "Bearer " + _ctx.cred("notion.api_key"),
+            "Notion-Version": "2022-06-28",
+        },
+    )
+
+    pages  = client.get("/search", json={"query": "meeting notes"})
+    result = client.post("/pages", json={...})
+    client.patch("/pages/{id}", json={"archived": True})
+    """
+
+    def __init__(
+        self,
+        base_url: str = "",
+        headers:  dict | None = None,
+        timeout:  int = 15,
+    ):
+        self.base_url = base_url.rstrip("/")
+        self.headers  = headers or {}
+        self.timeout  = timeout
+        self._session = None   # lazy-init
+
+    def _sess(self):
+        if self._session is None:
+            try:
+                import requests
+                self._session = requests.Session()
+                self._session.headers.update(self.headers)
+            except ImportError:
+                raise RuntimeError(
+                    "requests not installed.\n"
+                    "Run: pip install requests"
+                )
+        return self._session
+
+    def _url(self, path: str) -> str:
+        if path.startswith("http"):
+            return path          # absolute URL — use as-is
+        return self.base_url + ("/" if not path.startswith("/") else "") + path.lstrip("/")
+
+    def _call(self, method: str, path: str, **kwargs) -> Any:
+        import requests as _req
+        url = self._url(path)
+        try:
+            r = self._sess().request(method, url, timeout=self.timeout, **kwargs)
+        except _req.exceptions.ConnectionError:
+            raise RuntimeError(
+                f"Cannot connect to {url}.\n"
+                "Check your network connection and the API base URL."
+            )
+        except _req.exceptions.Timeout:
+            raise RuntimeError(
+                f"Request to {url} timed out after {self.timeout}s."
+            )
+
+        if not r.ok:
+            # Try to extract a useful message from the response body
+            try:
+                body = r.json()
+                msg  = (
+                    body.get("message") or
+                    body.get("error", {}).get("message") if isinstance(body.get("error"), dict) else None or
+                    body.get("error") or
+                    body.get("detail") or
+                    r.text[:300]
+                )
+            except Exception:
+                msg = r.text[:300]
+            raise RuntimeError(f"HTTP {r.status_code} from {url}: {msg}")
+
+        # Return parsed JSON if possible, raw text otherwise
+        ct = r.headers.get("Content-Type", "")
+        if "json" in ct:
+            return r.json()
+        if r.content:
+            return r.text
+        return {}
+
+    # ── Convenience methods ───────────────────────────────────────────────
+
+    def get(self, path: str, params: dict | None = None, **kwargs) -> Any:
+        return self._call("GET", path, params=params, **kwargs)
+
+    def post(self, path: str, json: Any = None, data: Any = None, **kwargs) -> Any:
+        return self._call("POST", path, json=json, data=data, **kwargs)
+
+    def patch(self, path: str, json: Any = None, **kwargs) -> Any:
+        return self._call("PATCH", path, json=json, **kwargs)
+
+    def put(self, path: str, json: Any = None, **kwargs) -> Any:
+        return self._call("PUT", path, json=json, **kwargs)
+
+    def delete(self, path: str, **kwargs) -> Any:
+        return self._call("DELETE", path, **kwargs)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  register_tool — unchanged API, now accepts params= shorthand
+# ─────────────────────────────────────────────────────────────────────────────
+
+def register_tool(
+    description: str,
+    parameters:  dict | None       = None,
+    params:      list[dict] | None = None,
+):
     """
     Decorator that registers a Python function as an AI tool.
 
-    The function may optionally accept `_ctx: ToolContext` as its last param;
-    ToolRegistry will inject it automatically at call time.
+    You can declare parameters in two ways:
 
-    Example
-    ───────
-    @register_tool(
-        description="Fetch the weather for a city.",
-        parameters={
-            "type": "object",
-            "required": ["city"],
-            "properties": {"city": {"type": "string", "description": "City name"}},
-        },
-    )
-    def get_weather(city: str, _ctx: ToolContext = None) -> str:
-        return f"Weather in {city}: sunny"
+    1. The new way — use param() helpers (recommended):
+       @register_tool(
+           description="...",
+           params=[
+               param("city",  "City name"),
+               param("units", "celsius or fahrenheit", enum=["celsius","fahrenheit"], default="celsius"),
+           ]
+       )
+
+    2. The old way — raw JSON schema (still works, backwards compatible):
+       @register_tool(
+           description="...",
+           parameters={
+               "type": "object",
+               "required": ["city"],
+               "properties": {"city": {"type": "string", "description": "City name"}},
+           }
+       )
     """
+    # params= shorthand takes priority over raw parameters=
+    if params is not None:
+        schema_dict = _params_to_schema(params)
+    elif parameters is not None:
+        schema_dict = parameters
+    else:
+        schema_dict = {"type": "object", "properties": {}}
+
     def decorator(fn: Callable) -> Callable:
         schema = {
             "type": "function",
             "function": {
                 "name":        fn.__name__,
                 "description": description,
-                "parameters":  parameters or {"type": "object", "properties": {}},
+                "parameters":  schema_dict,
             },
         }
         _REGISTRY[fn.__name__] = (fn, schema)
         return fn
     return decorator
 
-# ── Hot-reload auto-discovery ─────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Global registry
+# ─────────────────────────────────────────────────────────────────────────────
+
+_REGISTRY:      dict[str, tuple[Callable, dict]] = {}
+_MODULE_MTIMES: dict[str, float]                 = {}
+
 
 def _autodiscover(tools_pkg_path: Path, pkg_name: str) -> None:
     """
@@ -110,7 +373,7 @@ def _autodiscover(tools_pkg_path: Path, pkg_name: str) -> None:
     decorators fire.  Skips unchanged files for performance.
     """
     for _, module_name, _ in pkgutil.iter_modules([str(tools_pkg_path)]):
-        if module_name == "base":
+        if module_name in ("base", "TEMPLATE"):
             continue
 
         full_name = f"{pkg_name}.{module_name}"
@@ -118,7 +381,7 @@ def _autodiscover(tools_pkg_path: Path, pkg_name: str) -> None:
         mtime     = mod_file.stat().st_mtime if mod_file.exists() else 0.0
 
         if full_name in sys.modules and _MODULE_MTIMES.get(full_name) == mtime:
-            continue  # file unchanged — skip
+            continue  # unchanged — skip
 
         try:
             if full_name in sys.modules:
@@ -130,22 +393,13 @@ def _autodiscover(tools_pkg_path: Path, pkg_name: str) -> None:
         except Exception as e:
             print(f"[WARN] Could not load tool module '{full_name}': {e}", file=sys.stderr)
 
-# ── Registry facade ───────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  ToolRegistry — auto-discovers and dispatches tools
+# ─────────────────────────────────────────────────────────────────────────────
 
 class ToolRegistry:
-    """
-    Auto-discovers, validates, and dispatches tool calls.
-
-    Changes vs v1
-    ─────────────
-    • Passes ToolContext (typed dataclass) instead of raw _ctx dict
-    • Runs _autodiscover() on every schema() / call() → hot-reload for free
-    • Smart truncation: head (75%) + tail (25%) keeps context coherent
-    • Every error is returned as a string the LLM can act on — never raises
-    • Callbacks for the streaming web UI
-    """
-
-    DEFAULT_MAX_OUTPUT = 8_000   # characters per tool call
+    DEFAULT_MAX_OUTPUT = 8_000
 
     def __init__(
         self,
@@ -169,13 +423,9 @@ class ToolRegistry:
         self._pkg_path = Path(__file__).parent
         self._pkg_name = __name__.rsplit(".", 1)[0]   # "bujji.tools"
 
-        # Initial discovery
         self._refresh()
-
         tool_names = list(_REGISTRY)
         print(f"[INFO] Tools loaded ({len(tool_names)}): {', '.join(tool_names)}", file=sys.stderr)
-
-    # ── Public API ─────────────────────────────────────────────────────────
 
     def schema(self) -> list[dict]:
         """Return OpenAI tool-call schema list.  Triggers hot-reload check."""
@@ -184,8 +434,8 @@ class ToolRegistry:
 
     def call(self, name: str, args: dict) -> str:
         """
-        Dispatch a tool by name.  Always returns a str the LLM can read.
-        Never raises — every exception becomes an error message.
+        Dispatch a tool by name.  Always returns str — never raises.
+        ToolCredentialError gets a clean "not configured" message.
         """
         self._refresh()
 
@@ -199,18 +449,17 @@ class ToolRegistry:
         fn, _  = _REGISTRY[name]
         ctx    = self._make_ctx()
 
-        # ── Notify start ──
         if ctx.on_tool_start:
             ctx.on_tool_start(name, args)
 
-        # ── Inject context if function wants it ──
         call_args = dict(args)
         if "_ctx" in inspect.signature(fn).parameters:
             call_args["_ctx"] = ctx
 
-        # ── Execute ──
         try:
             raw = fn(**call_args)
+        except ToolCredentialError as e:
+            raw = str(e)          # already a friendly message — no [TOOL ERROR] prefix
         except TypeError as e:
             raw = (
                 f"[TOOL ERROR] Wrong arguments for '{name}': {e}\n"
@@ -221,7 +470,7 @@ class ToolRegistry:
 
         output = str(raw) if raw is not None else "(tool returned nothing)"
 
-        # ── Smart truncation: keep 75% from head + 25% from tail ──
+        # Smart truncation: keep 75% head + 25% tail
         if len(output) > self.max_output:
             head_limit = int(self.max_output * 0.75)
             tail_limit = self.max_output - head_limit
@@ -234,13 +483,10 @@ class ToolRegistry:
                 + tail
             )
 
-        # ── Notify done ──
         if ctx.on_tool_done:
             ctx.on_tool_done(name, output)
 
         return output
-
-    # ── Private ────────────────────────────────────────────────────────────
 
     def _refresh(self) -> None:
         _autodiscover(self._pkg_path, self._pkg_name)

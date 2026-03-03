@@ -363,14 +363,11 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
       <span class="nav-icon">⚙️</span><span class="lbl">Setup</span>
       <span class="nav-badge warn lbl" id="setup-badge" style="display:none">!</span>
     </div>
-    <div class="nav-item"        id="nav-channels" onclick="go('channels')">
-      <span class="nav-icon">📡</span><span class="lbl">Channels</span>
-    </div>
     <div class="nav-item"        id="nav-memory"   onclick="go('memory')">
       <span class="nav-icon">🧠</span><span class="lbl">Memory</span>
     </div>
     <div class="nav-item"        id="nav-skills"   onclick="go('skills')">
-      <span class="nav-icon">🧩</span><span class="lbl">Marketplace</span>
+      <span class="nav-icon">🧩</span><span class="lbl">Skills Marketplace</span>
     </div>
     <div class="nav-item"        id="nav-tools"    onclick="go('tools')">
       <span class="nav-icon">🔧</span><span class="lbl">Tools</span>
@@ -413,17 +410,18 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
   </div>
 
   <!-- SETUP (LLM Provider) -->
+  <!-- SETUP + CHANNELS merged -->
   <div class="panel" id="panel-setup">
     <div class="panel-scroll">
       <div class="panel-title">⚙️ Setup</div>
-      <p class="panel-sub">Configure your LLM provider. All settings are saved to <span id="cfg-path-display" class="cfg-path">~/.bujji/config.json</span></p>
+      <p class="panel-sub">All settings saved to <span id="cfg-path-display" class="cfg-path">~/.bujji/config.json</span></p>
 
+      <!-- LLM -->
       <div class="card">
         <div class="card-title">
           🤖 LLM Provider
           <span class="badge" id="llm-badge">not configured</span>
         </div>
-
         <div class="form-group">
           <label>Provider</label>
           <select class="field" id="s-provider" onchange="onProviderChange()">
@@ -437,19 +435,16 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
             <option value="ollama">Ollama — local, no API key</option>
           </select>
         </div>
-
         <div class="form-group" id="apikey-group">
           <label>API Key</label>
           <input type="password" class="field" id="s-apikey" placeholder="Paste your key here…" autocomplete="off">
           <div class="hint" id="key-link-hint"></div>
         </div>
-
         <div class="form-group">
           <label>Model</label>
           <input type="text" class="field" id="s-model" placeholder="e.g. gpt-4o-mini">
           <div class="model-chips" id="model-chips"></div>
         </div>
-
         <div class="btn-row">
           <button class="btn btn-primary" onclick="saveLLM()">Save LLM settings</button>
           <button class="btn btn-ghost"   onclick="testLLM()" id="btn-test-llm">Test connection</button>
@@ -457,8 +452,9 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
         </div>
       </div>
 
+      <!-- Web Search -->
       <div class="card">
-        <div class="card-title">🔍 Web Search (optional)</div>
+        <div class="card-title">🔍 Web Search <span style="font-weight:400;color:var(--muted)">(optional)</span></div>
         <div class="form-group">
           <label>Brave Search API Key</label>
           <input type="password" class="field" id="s-brave" placeholder="BSA…">
@@ -469,10 +465,27 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
         </div>
       </div>
 
+      <!-- Notion -->
+      <div class="card">
+        <div class="card-title">
+          📓 Notion <span style="font-weight:400;color:var(--muted)">(optional)</span>
+          <span class="badge" id="notion-badge" style="display:none">connected</span>
+        </div>
+        <div class="form-group">
+          <label>Integration Secret</label>
+          <input type="password" class="field" id="s-notion" placeholder="secret_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+          <div class="hint"><a href="https://www.notion.so/my-integrations" target="_blank">notion.so/my-integrations</a> → New integration → copy the secret</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-sm" onclick="saveNotion()">Save</button>
+        </div>
+      </div>
+
+      <!-- Workspace -->
       <div class="card">
         <div class="card-title">📂 Workspace</div>
         <div class="form-group">
-          <label>Directory (where memory, skills and cron files live)</label>
+          <label>Directory (memory, skills &amp; cron files)</label>
           <input type="text" class="field" id="s-workspace" placeholder="~/.bujji/workspace">
           <div class="hint">Relative paths are expanded from your home directory.</div>
         </div>
@@ -480,14 +493,6 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
           <button class="btn btn-primary btn-sm" onclick="saveWorkspace()">Save</button>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- CHANNELS -->
-  <div class="panel" id="panel-channels">
-    <div class="panel-scroll">
-      <div class="panel-title">📡 Channels</div>
-      <p class="panel-sub">Connect bujji to messaging platforms. Each channel is independent — enable only what you need.</p>
 
       <!-- Telegram -->
       <div class="card" id="card-telegram">
@@ -495,7 +500,6 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
           ✈️ Telegram
           <span class="badge off" id="tg-badge">disabled</span>
         </div>
-
         <div class="toggle-row" id="tg-toggle-row" onclick="toggleChannel('telegram')">
           <div>
             <div class="toggle-label">Enable Telegram bot</div>
@@ -503,7 +507,6 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
           </div>
           <div class="toggle" id="tg-toggle"></div>
         </div>
-
         <div class="form-group">
           <label>Bot Token</label>
           <div class="field-row">
@@ -513,17 +516,12 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
           <div class="hint">Get a token: open Telegram → <b>@BotFather</b> → /newbot</div>
           <div id="tg-verify-result" class="verify-result"></div>
         </div>
-
         <div class="form-group">
           <label>Allow From (Telegram User IDs)</label>
           <input type="text" class="field" id="tg-allowfrom"
             placeholder="123456789, 987654321 — leave empty to allow everyone">
-          <div class="hint">
-            Find your user ID: open Telegram → <b>@userinfobot</b> → send any message.
-            Comma-separated. Empty = public (anyone can message your bot).
-          </div>
+          <div class="hint">Find your ID: Telegram → <b>@userinfobot</b>. Comma-separated. Empty = public.</div>
         </div>
-
         <div class="btn-row">
           <button class="btn btn-primary" onclick="saveTelegram()">Save Telegram</button>
         </div>
@@ -535,7 +533,6 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
           🎮 Discord
           <span class="badge off" id="dc-badge">disabled</span>
         </div>
-
         <div class="toggle-row" onclick="toggleChannel('discord')">
           <div>
             <div class="toggle-label">Enable Discord bot</div>
@@ -543,35 +540,22 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
           </div>
           <div class="toggle" id="dc-toggle"></div>
         </div>
-
         <div class="form-group">
           <label>Bot Token</label>
           <input type="password" class="field" id="dc-token" placeholder="MTI…" autocomplete="off">
-          <div class="hint">
-            Create a bot: <a href="https://discord.com/developers/applications" target="_blank">discord.com/developers</a> → New Application → Bot → Reset Token
-          </div>
+          <div class="hint"><a href="https://discord.com/developers/applications" target="_blank">discord.com/developers</a> → New Application → Bot → Reset Token</div>
         </div>
-
         <div class="form-group">
           <label>Allow From (Discord User IDs)</label>
           <input type="text" class="field" id="dc-allowfrom"
-            placeholder="123456789012345678 — leave empty to respond in all allowed channels">
-          <div class="hint">Right-click a username in Discord → Copy User ID (enable Developer Mode in settings).</div>
+            placeholder="123456789012345678 — leave empty to respond everywhere">
+          <div class="hint">Right-click username → Copy User ID (enable Developer Mode in settings).</div>
         </div>
-
         <div class="btn-row">
           <button class="btn btn-primary" onclick="saveDiscord()">Save Discord</button>
         </div>
       </div>
 
-      <div class="card" style="border-style:dashed;background:transparent">
-        <div class="card-title" style="color:var(--muted)">➕ More channels</div>
-        <p style="font-size:12px;color:var(--muted);line-height:1.7">
-          Add WhatsApp, Slack, or any other platform by creating<br>
-          <code>bujji/connections/slack.py</code> with a <code>.run()</code> method<br>
-          and wiring it into <code>main.py cmd_gateway()</code>.
-        </p>
-      </div>
     </div>
   </div>
 
@@ -764,6 +748,7 @@ function populateForms(cfg) {
   document.getElementById('s-model').value    = cfg.agents?.defaults?.model || ''
   document.getElementById('s-brave').value    = cfg.tools?.web?.search?.api_key || ''
   document.getElementById('s-workspace').value = cfg.agents?.defaults?.workspace || ''
+  loadNotion(cfg)
   onProviderChange()
 
   // Telegram
@@ -792,7 +777,7 @@ function go(name) {
   if (name === 'memory')   loadMemory()
   if (name === 'skills') { renderCatalog(); loadSkills() }
   if (name === 'tools')    loadTools()
-  if (name === 'channels') refreshChannelBadges()
+  if (name === 'setup')    refreshChannelBadges()
 }
 
 function toggleSidebar() {
@@ -934,7 +919,23 @@ async function saveWorkspace() {
   await saveConfig({agents:{defaults:{workspace:ws}}}, 'Workspace saved ✓')
 }
 
-// ── Channels ───────────────────────────────────────────────────────────────
+// ── Notion ────────────────────────────────────────────────────────────────
+function loadNotion(cfg) {
+  const key = cfg.tools?.notion?.api_key || ''
+  const el  = document.getElementById('s-notion')
+  if (el) el.value = key
+  const badge = document.getElementById('notion-badge')
+  if (badge) badge.style.display = key ? '' : 'none'
+}
+
+async function saveNotion() {
+  const key = document.getElementById('s-notion')?.value.trim() || ''
+  await saveConfig({ tools: { notion: { api_key: key } } }, key ? 'Notion key saved ✓' : 'Notion key cleared')
+  const r = await fetch('/api/config/raw')
+  if (r.ok) loadNotion(await r.json())
+}
+
+
 function setToggleUI(channel, enabled) {
   const toggle = document.getElementById(channel === 'telegram' ? 'tg-toggle' : 'dc-toggle')
   if (toggle) toggle.className = 'toggle' + (enabled ? ' on' : '')

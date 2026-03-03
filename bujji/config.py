@@ -39,7 +39,8 @@ DEFAULT_CONFIG = {
     "tools": {
         "web": {
             "search": {"api_key": "", "max_results": 5}
-        }
+        },
+        "notion": {"api_key": ""},
     },
 }
 

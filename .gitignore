@@ -33,3 +33,36 @@ Thumbs.db # specific to Windows
 
 # Python version file
 .python-version
+
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+/dist/
+/build/
+*.egg-info/
+*.wheel
+
+# Virtual environments (uv manages these in .venv)
+.venv/
+
+.pyproject.toml
+# uv-specific
+# It is generally recommended to COMMIT uv.lock for applications, 
+# but you can ignore it for libraries if you prefer.
+# uv.lock
+
+# Ruff cache (if using ruff with uv)
+.ruff_cache/
+
+# Local environment variables
+.env
+.venv
+
+/uv.lock/

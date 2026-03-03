@@ -71,6 +71,9 @@ def _mask_config(cfg: dict) -> dict:
     brave = s.get("tools", {}).get("web", {}).get("search", {}).get("api_key", "")
     if brave:
         s["tools"]["web"]["search"]["api_key"] = brave[:6] + "…"
+    notion_key = s.get("tools", {}).get("notion", {}).get("api_key", "")
+    if notion_key:
+        s["tools"]["notion"]["api_key"] = notion_key[:6] + "…"
     return s
 
 

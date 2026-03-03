@@ -329,7 +329,7 @@ def cmd_status(args) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="bujji",
-        description=f"{LOGO} bujji v2 — Ultra-lightweight AI assistant",
+        description=f"{LOGO} bujji  — Ultra-lightweight AI assistant",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""
   examples:
