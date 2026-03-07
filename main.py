@@ -122,7 +122,7 @@ def cmd_serve(args) -> None:
         sys.exit("ERROR: pip install requests")
 
     cfg  = load_config()
-    port = getattr(args, "port", 7337) or 7337
+    port = getattr(args, "port", 5168) or 5168
     host = getattr(args, "host", "127.0.0.1") or "127.0.0.1"
 
     from bujji.server import run_server

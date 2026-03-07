@@ -1352,20 +1352,27 @@ async function sendMessage() {
           content += evt.content
           bubble.innerHTML = md(content)
           scrollDown()
-
         } else if (evt.type === 'tool_start') {
-          if (!toolBox) {
-            toolBox = document.createElement('div')
-            toolBox.style.cssText = 'display:flex;flex-direction:column;gap:5px;margin-top:6px'
-            botEl.appendChild(toolBox)
+          // Don't show 'message' tool as a card — it's a mid-task push message
+          if (evt.name === 'message') {
+            if (typing?.parentNode) typing.remove()
+            const txt = evt.args?.text || evt.args?.message || ''
+            if (txt) { content += (content ? '\n\n' : '') + txt; bubble.innerHTML = md(content) }
+            scrollDown()
+          } else {
+            if (!toolBox) {
+              toolBox = document.createElement('div')
+              toolBox.style.cssText = 'display:flex;flex-direction:column;gap:5px;margin-top:6px'
+              botEl.appendChild(toolBox)
+            }
+            const card = makeToolCard(evt.name, evt.args, null)
+            card.dataset.n = evt.name
+            toolBox.appendChild(card)
+            scrollDown()
           }
-          const card = makeToolCard(evt.name, evt.args, null)
-          card.dataset.n = evt.name
-          toolBox.appendChild(card)
-          scrollDown()
-
         } else if (evt.type === 'tool_done') {
-          if (toolBox) {
+          if (evt.name === 'message') { scrollDown() } // already handled above
+          else if (toolBox) {
             const pending = [...toolBox.children].reverse().find(c => c.dataset.n === evt.name && !c.dataset.done)
             if (pending) {
               pending.dataset.done = '1'
@@ -1477,7 +1484,15 @@ function md(text) {
   h = h.replace(/`([^`\n]+)`/g, '<code>$1</code>')
   h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
   h = h.replace(/\*(.+?)\*/g, '<em>$1</em>')
-  h = h.replace(/\[(.+?)\]\((https?:\/\/.+?)\)/g, '<a href="$2" target="_blank" style="color:var(--accent2)">$1</a>')
+  // Image URLs — render inline
+  h = h.replace(/(https?:\/\/\S+\.(?:jpg|jpeg|png|gif|webp)(\?\S*)?)/gi,
+    '<br><img src="$1" style="max-width:100%;max-height:400px;border-radius:8px;margin:6px 0;display:block" onerror="this.style.display=\'none\'"><br>')
+  // Named links
+  h = h.replace(/\[(.+?)\]\((https?:\/\/.+?)\)/g,
+    '<a href="$2" target="_blank" style="color:var(--accent2)">$1</a>')
+  // Plain URLs (not already in an img tag)
+  h = h.replace(/(?<!src=")(https?:\/\/[^\s<"]+)/g,
+    '<a href="$1" target="_blank" style="color:var(--accent2)">$1</a>')
   h = h.replace(/\n/g, '<br>')
   return h
 }
