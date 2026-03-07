@@ -5,7 +5,6 @@
 ▐▌ ▐▌▐▌ ▐▌   ▐▌   ▐▌  █  
 ▐▛▀▚▖▐▌ ▐▌   ▐▌   ▐▌  █  
 ▐▙▄▞▘▝▚▄▞▘▗▄▄▞▘▗▄▄▞▘▗▄█▄▖
-                                           
 ```
 
 **A minimal, hackable personal AI agent that runs anywhere Python runs.**
@@ -18,7 +17,7 @@
 Named after the loyal robot companion from *Kalki 2898 AD*.  
 Inspired by [PicoClaw](https://github.com/sipeed/picoclaw) by Sipeed.
 
-[Quick Start](#-quick-start) · [How It Works](#-how-it-works) · [Adding Tools](#-adding-tools) · [Configuration](#-configuration) · [LLM Providers](#-llm-providers) · [Contributing](#-contributing)
+[Quick Start](#-quick-start) · [How It Works](#-how-it-works) · [Adding Tools](#-adding-tools) · [Sub-Agents](#-sub-agents) · [Configuration](#-configuration) · [LLM Providers](#-llm-providers) · [Contributing](#-contributing)
 
 </div>
 
@@ -26,7 +25,7 @@ Inspired by [PicoClaw](https://github.com/sipeed/picoclaw) by Sipeed.
 
 ## What is bujji?
 
-Bujji is a self-hosted AI agent framework. It connects any OpenAI-compatible LLM to a set of tools — shell, web, files, memory, Notion, and whatever else you wire up — and runs as a web app, a terminal chat, a Telegram bot, or a Discord bot, all from a single codebase with minimal setup.
+Bujji is a self-hosted AI agent framework. It connects any OpenAI-compatible LLM to a set of tools — shell, web, files, memory, and whatever else you wire up — and runs as a web app, a terminal chat, a Telegram bot, or a Discord bot, all from a single codebase with minimal setup.
 
 The core philosophy: **a small agent you own and understand beats a large agent you rent and don't.**
 
@@ -43,15 +42,16 @@ The core philosophy: **a small agent you own and understand beats a large agent 
 - [Quick Start](#-quick-start)
 - [How It Works](#-how-it-works)
 - [Adding Tools](#-adding-tools)
+  - [Scaffold a tool in 30 seconds](#scaffold-a-tool-in-30-seconds)
   - [The Basics](#the-basics)
   - [Parameters](#parameters)
   - [Credentials](#credentials)
   - [HTTP APIs](#http-apis)
   - [Full Example — Weather API](#full-example--weather-api)
-  - [Full Example — REST API with Auth](#full-example--rest-api-with-auth)
   - [Error Handling](#error-handling)
   - [Optional Dependencies](#optional-dependencies)
   - [Tool Checklist](#tool-checklist)
+- [Sub-Agents](#-sub-agents)
 - [Built-in Tools](#-built-in-tools)
 - [Skills](#-skills)
 - [Background Automation](#-background-automation)
@@ -94,7 +94,7 @@ python main.py agent        # Terminal chat
 | Telegram bot | *(none — uses `requests`)* |
 | Web search | *(none)* + [Brave API key](https://brave.com/search/api) (free, 2k/month) |
 | Discord bot | `pip install discord.py` |
-| Marketplace tools | Varies per tool — each prints a clear install message if missing |
+| Community tools | Varies per tool — each prints a clear install message if missing |
 
 ---
 
@@ -130,7 +130,36 @@ Everything is plain Python. No magic. No framework overhead.
 
 ## 🔧 Adding Tools
 
-This is the main extension point. A tool is a Python function with a `@register_tool` decorator. Drop the file into `bujji/tools/` and it's live immediately — no restart, no registration step.
+A tool is a Python function with a `@register_tool` decorator. Drop the file into `bujji/tools/` and it's live immediately — no restart, no registration step.
+
+### Scaffold a tool in 30 seconds
+
+```bash
+python main.py new-tool weather
+```
+
+This launches an interactive wizard that asks 4 questions and generates a ready-to-edit file at `bujji/tools/weather.py`:
+
+```
+bujji  New tool scaffold: Weather
+──────────────────────────────────────────────────────
+  API docs / key URL: https://openweathermap.org/api
+  API base URL: https://api.openweathermap.org/data/2.5
+  Auth pattern: 1  (Bearer token)
+  First tool function name: weather_get
+
+  ✅ Created: bujji/tools/weather.py
+
+  Next steps:
+    1. Open bujji/tools/weather.py and fill in your API endpoints
+    2. Add your credential to ~/.bujji/config.json
+    ...
+  The tool is already live — no restart needed.
+```
+
+Open the file, fill in your endpoint, save. Done.
+
+---
 
 ### The Basics
 
@@ -150,8 +179,8 @@ def my_tool_name(city: str, _ctx: ToolContext = None) -> str:
 
 Three rules:
 1. The function **must return a string**. The LLM reads whatever you return.
-2. The function name becomes the tool name the LLM calls. Keep it descriptive: `notion_search`, `github_list_issues`, `weather_get`.
-3. `_ctx: ToolContext = None` is optional — include it if you need config, credentials, or workspace access.
+2. The function name becomes the tool name. Keep it descriptive: `notion_search`, `github_list_issues`, `weather_get`.
+3. `_ctx: ToolContext = None` is optional — include it when you need config, credentials, or workspace access.
 
 ---
 
@@ -160,53 +189,30 @@ Three rules:
 Use `param()` to declare parameters. It replaces raw JSON schema with one line per parameter.
 
 ```python
-from bujji.tools.base import register_tool, param, ToolContext
-
 @register_tool(
     description="Search issues in a project.",
     params=[
-        # Required string (default)
-        param("query", "Search query"),
-
-        # Optional integer with default
-        param("limit", "Max results to return", type="integer", default=10),
-
-        # Enum — LLM must pick one of these values
-        param("status", "Filter by status", enum=["open", "closed", "all"], default="open"),
-
-        # Optional string
-        param("assignee", "Filter by assignee username", default=""),
-
-        # Boolean flag
-        param("verbose", "Include full descriptions", type="boolean", default=False),
-
-        # Array of strings
-        param("labels", "Filter by labels", type="array", default=[]),
+        param("query",    "Search query"),
+        param("limit",    "Max results to return",   type="integer", default=10),
+        param("status",   "Filter by status",        enum=["open", "closed", "all"], default="open"),
+        param("assignee", "Filter by assignee",      default=""),
+        param("verbose",  "Include full descriptions", type="boolean", default=False),
+        param("labels",   "Filter by labels",        type="array", default=[]),
     ]
 )
-def project_search(
-    query:    str,
-    limit:    int  = 10,
-    status:   str  = "open",
-    assignee: str  = "",
-    verbose:  bool = False,
-    labels:   list = None,
-    _ctx: ToolContext = None,
-) -> str:
-    ...
 ```
 
-**`param()` signature:**
+**`param()` reference:**
 
 ```python
 param(
-    name,           # str  — must match the function argument name exactly
-    description,    # str  — what the LLM sees; be specific
-    type     = "string",   # "string" | "integer" | "number" | "boolean" | "array"
-    required = True,       # auto-set to False if you pass a default
-    default  = _MISSING,   # any value; makes the param optional
-    enum     = None,       # list of allowed string values
-    items    = None,       # for type="array": {"type": "string"} (default)
+    name,                    # must match the function argument name exactly
+    description,             # what the LLM sees — be specific
+    type     = "string",     # "string" | "integer" | "number" | "boolean" | "array"
+    required = True,         # auto-set to False when you pass a default
+    default  = _MISSING,     # any value; makes the param optional
+    enum     = None,         # list of allowed string values
+    items    = None,         # for type="array": {"type": "string"} by default
 )
 ```
 
@@ -214,41 +220,40 @@ param(
 
 ### Credentials
 
-If your tool needs an API key, credentials live in `~/.bujji/config.json` under `tools.<service>.<key>`. Use `_ctx.cred()` to access them — it gives a clean, actionable error message to the LLM if the key is missing.
+Credentials live in `~/.bujji/config.json` under `tools.<service>.<key>`. Use `_ctx.cred()` to access them.
 
-**1. Add it to `config.py`** — so the default config schema includes it:
+**1. Add to `config.py`** — so the default config schema includes it:
 
 ```python
-# bujji/config.py  →  DEFAULT_CONFIG["tools"]
+# bujji/config.py → DEFAULT_CONFIG["tools"]
 "tools": {
-    "web":    {"search": {"api_key": ""}},
-    "notion": {"api_key": ""},
-    "openweather": {"api_key": ""},   # ← add your service here
+    "web":          {"search": {"api_key": ""}},
+    "openweather":  {"api_key": ""},   # ← add your service
 },
 ```
 
-**2. Add it to `server.py`** — so the key gets masked in the web UI (never shown in full):
+**2. Add masking to `server.py`** — so the key is never returned in full to the UI:
 
 ```python
-# bujji/server.py  →  inside _mask_config()
+# bujji/server.py → _mask_config()
 weather_key = s.get("tools", {}).get("openweather", {}).get("api_key", "")
 if weather_key:
     s["tools"]["openweather"]["api_key"] = weather_key[:6] + "…"
 ```
 
-**3. Add it to the Setup tab in `ui/index.html`** — so users can paste the key in the UI:
+**3. Add a UI card to `ui/index.html`** — so users can paste the key in Settings:
 
 ```html
-<!-- Inside the Setup panel, add a new card -->
 <div class="card">
-  <div class="card-title">
-    🌤 OpenWeather <span style="font-weight:400;color:var(--muted)">(optional)</span>
-    <span class="badge" id="openweather-badge" style="display:none">connected</span>
-  </div>
+  <div class="card-title">🌤 OpenWeather</div>
   <div class="form-group">
     <label>API Key</label>
-    <input type="password" class="field" id="s-openweather" placeholder="xxxxxxxxxxxxxxxx" autocomplete="off">
-    <div class="hint"><a href="https://openweathermap.org/api" target="_blank">openweathermap.org/api</a> → Get API key (free tier)</div>
+    <input type="password" class="field" id="s-openweather"
+           placeholder="xxxxxxxxxxxxxxxx" autocomplete="off">
+    <div class="hint">
+      <a href="https://openweathermap.org/api" target="_blank">openweathermap.org</a>
+      — free tier available
+    </div>
   </div>
   <div class="btn-row">
     <button class="btn btn-primary btn-sm" onclick="saveOpenWeather()">Save</button>
@@ -256,43 +261,27 @@ if weather_key:
 </div>
 ```
 
-```javascript
-// In the <script> section of ui/index.html
-async function saveOpenWeather() {
-  const key = document.getElementById('s-openweather')?.value.trim() || ''
-  await saveConfig({ tools: { openweather: { api_key: key } } }, 'OpenWeather key saved ✓')
-  const r = await fetch('/api/config/raw')
-  if (r.ok) {
-    const cfg = await r.json()
-    const badge = document.getElementById('openweather-badge')
-    if (badge) badge.style.display = cfg.tools?.openweather?.api_key ? '' : 'none'
-  }
-}
-```
-
 **4. Use it in your tool:**
 
 ```python
 def weather_get(city: str, _ctx: ToolContext = None) -> str:
-    key = _ctx.cred("openweather.api_key")   # raises a clean error if missing
+    key = _ctx.cred("openweather.api_key")
     ...
 ```
 
-`_ctx.cred("service.key")` maps directly to `cfg["tools"]["service"]["key"]`. If the value is empty, bujji returns a message like:
+If the key is missing, bujji returns a clear message to the LLM:
 
 ```
 [openweather] 'api_key' not configured.
-  → Add it in the web UI: Setup → OpenWeather
-  → Or in config.json: tools.openweather.api_key
+  → Add it in the web UI: Settings → OpenWeather
+  → Or in config.json:   tools.openweather.api_key
 ```
-
-The LLM reads this and tells the user exactly what to do — no silent failures.
 
 ---
 
 ### HTTP APIs
 
-For any REST API, use `HttpClient`. It handles base URLs, headers, JSON parsing, and error messages in one place.
+Use `HttpClient` for any REST API. It handles base URLs, auth headers, JSON parsing, and error messages.
 
 ```python
 from bujji.tools.base import HttpClient, ToolContext
@@ -307,27 +296,18 @@ def _client(_ctx: ToolContext) -> HttpClient:
     )
 ```
 
-Then use it:
-
 ```python
-# GET with query params
-data = client.get("/search", params={"q": query, "limit": 10})
-
-# POST with JSON body
-result = client.post("/items", json={"name": "New item", "status": "open"})
-
-# PATCH / PUT / DELETE
+data   = client.get("/search", params={"q": query, "limit": 10})
+result = client.post("/items", json={"name": "New item"})
 client.patch(f"/items/{item_id}", json={"status": "closed"})
 client.delete(f"/items/{item_id}")
 ```
 
-`HttpClient` auto-parses JSON responses and raises a `RuntimeError` with the HTTP status code and body on failure. The `ToolRegistry` catches that and turns it into a `[TOOL ERROR]` string the LLM can read.
+Non-2xx responses raise `RuntimeError` with the status code and body — `ToolRegistry` catches it automatically.
 
 ---
 
 ### Full Example — Weather API
-
-A complete, real tool that fetches current weather:
 
 ```python
 # bujji/tools/weather.py
@@ -343,7 +323,7 @@ def _client(_ctx: ToolContext) -> HttpClient:
 
 @register_tool(
     description=(
-        "Get the current weather for any city. "
+        "Get current weather for any city. "
         "Returns temperature, conditions, humidity, and wind speed."
     ),
     params=[
@@ -355,141 +335,37 @@ def weather_get(city: str, units: str = "metric", _ctx: ToolContext = None) -> s
     key    = _ctx.cred("openweather.api_key")
     client = _client(_ctx)
 
-    data = client.get("/weather", params={
-        "q":     city,
-        "units": units,
-        "appid": key,
-    })
+    data = client.get("/weather", params={"q": city, "units": units, "appid": key})
 
     unit_symbol = "°C" if units == "metric" else "°F"
-    name        = data.get("name", city)
     temp        = data["main"]["temp"]
     feels_like  = data["main"]["feels_like"]
-    humidity    = data["main"]["humidity"]
     description = data["weather"][0]["description"].capitalize()
     wind        = data["wind"]["speed"]
-    wind_unit   = "m/s" if units == "metric" else "mph"
 
     return (
-        f"{name}: {description}\n"
-        f"Temperature: {temp}{unit_symbol} (feels like {feels_like}{unit_symbol})\n"
-        f"Humidity: {humidity}%\n"
-        f"Wind: {wind} {wind_unit}"
+        f"{data.get('name', city)}: {description}\n"
+        f"Temperature : {temp}{unit_symbol} (feels like {feels_like}{unit_symbol})\n"
+        f"Humidity    : {data['main']['humidity']}%\n"
+        f"Wind        : {wind} {'m/s' if units == 'metric' else 'mph'}"
     )
-```
-
-Save the file. It's immediately callable by the LLM on the next message.
-
----
-
-### Full Example — REST API with Auth
-
-A tool that reads from a hypothetical project management API:
-
-```python
-# bujji/tools/tasks.py
-import json
-from bujji.tools.base import HttpClient, ToolContext, param, register_tool
-
-SERVICE = "taskapp"
-
-
-def _client(_ctx: ToolContext) -> HttpClient:
-    return HttpClient(
-        base_url = "https://api.taskapp.com/v2",
-        headers  = {
-            "Authorization": "Bearer " + _ctx.cred(f"{SERVICE}.api_key"),
-            "Content-Type":  "application/json",
-        },
-    )
-
-
-@register_tool(
-    description="List tasks from your project board, with optional status and assignee filters.",
-    params=[
-        param("project",  "Project name or ID"),
-        param("status",   "Filter by task status", enum=["open", "in_progress", "done", "all"], default="open"),
-        param("assignee", "Filter by assignee username (leave empty for all)", default=""),
-        param("limit",    "Max tasks to return", type="integer", default=20),
-    ]
-)
-def task_list(
-    project:  str,
-    status:   str = "open",
-    assignee: str = "",
-    limit:    int = 20,
-    _ctx: ToolContext = None,
-) -> str:
-    client = _client(_ctx)
-    params = {"project": project, "limit": limit}
-    if status != "all":
-        params["status"] = status
-    if assignee:
-        params["assignee"] = assignee
-
-    data  = client.get("/tasks", params=params)
-    tasks = data.get("tasks", [])
-
-    if not tasks:
-        return f"No {status} tasks found in '{project}'."
-
-    lines = []
-    for t in tasks:
-        assignee_str = f" → {t['assignee']}" if t.get("assignee") else ""
-        lines.append(f"[{t['status'].upper()}] {t['title']} (#{t['id']}){assignee_str}")
-
-    return f"Found {len(tasks)} task(s) in '{project}':\n\n" + "\n".join(lines)
-
-
-@register_tool(
-    description="Create a new task in a project.",
-    params=[
-        param("project",     "Project name or ID"),
-        param("title",       "Task title"),
-        param("description", "Task description", default=""),
-        param("assignee",    "Assign to this username", default=""),
-        param("priority",    "Task priority", enum=["low", "medium", "high"], default="medium"),
-    ]
-)
-def task_create(
-    project:     str,
-    title:       str,
-    description: str = "",
-    assignee:    str = "",
-    priority:    str = "medium",
-    _ctx: ToolContext = None,
-) -> str:
-    client  = _client(_ctx)
-    payload = {"project": project, "title": title, "priority": priority}
-    if description:
-        payload["description"] = description
-    if assignee:
-        payload["assignee"] = assignee
-
-    result = client.post("/tasks", json=payload)
-    return f"✓ Task created: '{title}' (#{result.get('id')}) in {project}"
 ```
 
 ---
 
 ### Error Handling
 
-You don't need to wrap everything in try/except. The `ToolRegistry` catches all exceptions and returns them as `[TOOL ERROR] ...` strings — the LLM reads the error and can explain it to the user or try something different.
-
-What you should handle explicitly:
+`ToolRegistry` catches all exceptions automatically. What you should handle explicitly:
 
 ```python
 def my_tool(query: str, _ctx: ToolContext = None) -> str:
-    # 1. Empty or invalid input — return early with a clear message
     if not query.strip():
-        return "Please provide a search query."
+        return "Please provide a search query."          # ← validate input
 
-    # 2. Empty results — always explain what happened
     items = fetch_items(query)
     if not items:
-        return f"No results found for '{query}'."
+        return f"No results found for '{query}'."        # ← never return ""
 
-    # 3. Partial failure — return what you have
     lines = []
     for item in items:
         try:
@@ -502,51 +378,97 @@ def my_tool(query: str, _ctx: ToolContext = None) -> str:
 
 What you don't need to handle — the framework does this automatically:
 
-- `ToolCredentialError` — missing API key → friendly "not configured" message
-- `RuntimeError` from `HttpClient` — HTTP errors → `[TOOL ERROR] HTTP 401 from ...`
-- Any other unhandled exception → `[TOOL ERROR] 'tool_name' raised ValueError: ...`
+- Missing credentials → clean "not configured" message
+- HTTP errors from `HttpClient` → `[TOOL ERROR] HTTP 401 from ...`
+- Any unhandled exception → `[TOOL ERROR] 'tool_name' raised ValueError: ...`
 
 ---
 
 ### Optional Dependencies
 
-If your tool needs a pip package beyond `requests`, import it lazily inside the function and give a clear install message:
+Import lazily inside the function and give a clear install message:
 
 ```python
-@register_tool(
-    description="Parse a PDF file and extract its text content.",
-    params=[param("path", "Path to the PDF file")]
-)
 def pdf_read(path: str, _ctx: ToolContext = None) -> str:
     try:
         import pdfplumber
     except ImportError:
-        return (
-            "[pdf_read] 'pdfplumber' is not installed.\n"
-            "Run: pip install pdfplumber"
-        )
+        return "[pdf_read] Run: pip install pdfplumber"
 
     with pdfplumber.open(path) as pdf:
         return "\n\n".join(page.extract_text() or "" for page in pdf.pages)
 ```
 
-This way the core agent is never broken by a missing optional dependency, and the LLM can pass the install instruction directly to the user.
-
 ---
 
 ### Tool Checklist
 
-Before shipping a tool:
-
-- [ ] Function name is descriptive: `service_action` pattern (e.g. `github_list_issues`)
+- [ ] Function name follows `service_action` pattern (e.g. `github_list_issues`)
 - [ ] `description=` is a full sentence explaining when the LLM should use it
-- [ ] Every `param()` has a useful `description` — not just a variable name
-- [ ] Returns a string that reads well as plain text
-- [ ] Returns a non-empty message when there are no results (never return `""` or `[]`)
+- [ ] Every `param()` has a useful description
+- [ ] Returns a non-empty string even when there are no results
 - [ ] Credential key added to `DEFAULT_CONFIG` in `config.py`
-- [ ] Credential masking added to `server.py`
-- [ ] UI input added to `index.html` if users need to paste a key (see [Credentials](#credentials))
-- [ ] Optional pip packages are imported lazily with a clear install message
+- [ ] Credential masking added in `server.py`
+- [ ] UI input card added in `index.html` (see [Credentials](#credentials))
+- [ ] Optional pip packages imported lazily with a clear install message
+
+---
+
+## 🤖 Sub-Agents
+
+Sub-agents let the main agent delegate focused tasks to specialist agents. Each sub-agent runs its own `AgentLoop` with a custom persona, executes the task, and returns a result.
+
+Drop `bujji/tools/subagents.py` from the repo into your tools folder — it's hot-reloaded instantly.
+
+### `spawn_subagent`
+
+```
+You: Research the latest developments in edge AI and summarise them
+```
+
+Internally, the main agent can call:
+
+```json
+{
+  "tool": "spawn_subagent",
+  "args": {
+    "role": "researcher",
+    "task": "Find and summarise the 5 most important edge AI developments from the last 3 months."
+  }
+}
+```
+
+Built-in role shortcuts:
+
+| Role | Behaviour |
+|---|---|
+| `researcher` | Web search, summarise, cite sources |
+| `coder` | Write, review, or debug code |
+| `planner` | Break a goal into ordered subtasks |
+| `writer` | Draft documents, emails, or reports |
+| `analyst` | Read files/data and extract insights |
+| `memory` | Cleanly update USER.md with new facts |
+
+Or pass any free-form role description.
+
+### `agent_pipeline`
+
+Chain agents in sequence — each agent's output feeds the next via `{previous}`:
+
+```json
+{
+  "tool": "agent_pipeline",
+  "args": {
+    "stages": [
+      {"role": "researcher", "task": "Find recent AI hardware news"},
+      {"role": "analyst",    "task": "Identify the 3 biggest trends from: {previous}"},
+      {"role": "writer",     "task": "Write a 200-word briefing from: {previous}"}
+    ]
+  }
+}
+```
+
+This is the pattern for any multi-step automated workflow.
 
 ---
 
@@ -566,25 +488,14 @@ Before shipping a tool:
 | `update_user_memory` | Full `USER.md` rewrite (for restructuring) |
 | `get_time` | Current date and time |
 | `message` | Push a message to the user mid-task |
-| `notion_search` | Search Notion pages and databases |
-| `notion_get_page` | Read a Notion page's full content |
-| `notion_create_page` | Create a new Notion page |
-| `notion_append_to_page` | Append content to an existing Notion page |
-| `notion_get_database` | List rows from a Notion database |
-| `notion_add_database_row` | Add a row to a Notion database |
-| `notion_update_property` | Update a property on a database row |
-| `notion_get_comments` | Read comments on a page |
-| `notion_add_comment` | Add a comment to a page |
-
-> Notion tools require an integration secret — add it in Setup → Notion. See [notion.so/my-integrations](https://www.notion.so/my-integrations).
+| `spawn_subagent` | Delegate a task to a specialist sub-agent |
+| `agent_pipeline` | Run a chain of sub-agents in sequence |
 
 ---
 
 ## 🧩 Skills
 
-Skills are Markdown files that give bujji domain-specific instructions. They're injected into the system prompt on every message.
-
-**Create a skill:**
+Skills are Markdown files injected into the system prompt on every message.
 
 ```
 workspace/skills/python-expert/SKILL.md
@@ -598,12 +509,9 @@ You are a Python expert. Always:
 - Use f-strings instead of .format()
 - Add type hints to all function signatures
 - Recommend dataclasses for structured data
-- Suggest pathlib.Path over os.path
 ```
 
-Save and it's active immediately. Delete the file to deactivate it. No restart.
-
-Skills are also installable from the Marketplace tab in the web UI.
+Save and it's active. Delete to deactivate. No restart. Skills are also installable from the Marketplace tab in the web UI.
 
 ---
 
@@ -611,14 +519,11 @@ Skills are also installable from the Marketplace tab in the web UI.
 
 ### Heartbeat
 
-`HEARTBEAT.md` in your workspace runs every 30 minutes as an agent prompt. Use it for recurring checks or diary entries.
+`HEARTBEAT.md` in your workspace runs every 30 minutes as an agent prompt.
 
 ```markdown
-# HEARTBEAT.md
-
 - Check disk usage on /. If above 85%, append a warning to USER.md.
 - Append today's weather summary to journal.md.
-- If any process in the workspace/watch.txt list is not running, send me a message.
 ```
 
 ### Cron
@@ -632,17 +537,11 @@ Skills are also installable from the Marketplace tab in the web UI.
     "prompt": "Search for today's top AI news and append a summary to workspace/news.md",
     "interval_minutes": 1440,
     "last_run": null
-  },
-  {
-    "name": "disk-check",
-    "prompt": "Check disk usage. If /home is above 80%, append a warning to USER.md.",
-    "interval_minutes": 60,
-    "last_run": null
   }
 ]
 ```
 
-Start background services with:
+Start background services:
 
 ```bash
 python main.py gateway
@@ -652,7 +551,7 @@ python main.py gateway
 
 ## ⚙️ Configuration
 
-Config lives at `~/.bujji/config.json`. It's created by `python main.py onboard` and fully editable from the web UI at `http://localhost:7337`.
+Config lives at `~/.bujji/config.json`. Created by `python main.py onboard`, fully editable from the web UI.
 
 ```json
 {
@@ -679,18 +578,16 @@ Config lives at `~/.bujji/config.json`. It's created by `python main.py onboard`
     "discord":  { "enabled": false, "token": "", "allow_from": [] }
   },
   "tools": {
-    "web":    { "search": { "api_key": "", "max_results": 5 } },
-    "notion": { "api_key": "" }
+    "web": { "search": { "api_key": "", "max_results": 5 } }
   }
 }
 ```
 
 | Key | Description |
 |---|---|
-| `active_provider` | Which provider to use when multiple are configured |
-| `agents.defaults.max_tool_iterations` | Max tool calls per message before giving up (default: 20) |
-| `agents.defaults.restrict_to_workspace` | If true, file tools are sandboxed to the workspace directory |
-| `agents.defaults.max_tool_output_chars` | Tool output is truncated to this length (default: 8000) |
+| `agents.defaults.max_tool_iterations` | Max tool calls per message (default: 20) |
+| `agents.defaults.restrict_to_workspace` | Sandbox file tools to the workspace directory |
+| `agents.defaults.max_tool_output_chars` | Tool output truncation limit (default: 8000) |
 
 ---
 
@@ -703,8 +600,9 @@ Config lives at `~/.bujji/config.json`. It's created by `python main.py onboard`
 | `python main.py serve --port 8080` | Custom port |
 | `python main.py agent` | Interactive terminal chat |
 | `python main.py agent -m "message"` | Single message, non-interactive |
-| `python main.py agent --no-stream` | Disable streaming (useful for piping output) |
-| `python main.py gateway` | Start Telegram + Discord bots + heartbeat + cron |
+| `python main.py agent --no-stream` | Disable streaming |
+| `python main.py new-tool <name>` | Scaffold a new tool (e.g. `new-tool github`) |
+| `python main.py gateway` | Start Telegram + Discord + heartbeat + cron |
 | `python main.py setup-telegram` | Configure Telegram bot interactively |
 | `python main.py status` | Health check — provider, tools, channels |
 
@@ -712,56 +610,43 @@ Config lives at `~/.bujji/config.json`. It's created by `python main.py onboard`
 
 ## 🗂 The Workspace
 
-The workspace (`~/.bujji/workspace/` by default) is where bujji's "mind" lives. Every file is plain Markdown or JSON — readable, editable, version-controllable.
-
 ```
 workspace/
-├── SOUL.md         Core values and ethics — bujji reads this on every message
+├── SOUL.md         Core values and ethics
 ├── IDENTITY.md     Name, personality, and purpose
-├── USER.md         Persistent memory about you — bujji appends to this automatically
-├── AGENT.md        Self-description of active tools and capabilities
+├── USER.md         Persistent memory — bujji appends automatically, never overwrites
+├── AGENT.md        Self-description of active tools
 ├── HEARTBEAT.md    Task list bujji runs every 30 minutes
 ├── skills/
-│   └── my-skill/
-│       └── SKILL.md
+│   └── my-skill/SKILL.md
 └── cron/
     └── jobs.json
 ```
 
-| File | Written by | Purpose |
-|---|---|---|
-| `SOUL.md` | You | Core values, ethics, and personality traits |
-| `IDENTITY.md` | You | Name, description, and purpose |
-| `USER.md` | bujji + you | Persistent memory — never overwritten, only appended |
-| `AGENT.md` | bujji | Self-description of active tools |
+Every file is plain Markdown or JSON — readable, editable, version-controllable with git.
 
 ---
 
 ## 🤖 LLM Providers
 
-bujji works with any OpenAI-compatible API. Configure during `python main.py onboard` or via the web UI.
+bujji works with any OpenAI-compatible API.
 
 | Provider | Free Tier | Notes |
 |---|---|---|
-| [OpenRouter](https://openrouter.ai/keys) | ✅ Yes | Access to all major models with one key |
-| [OpenAI](https://platform.openai.com/api-keys) | — | gpt-4o-mini is the cheapest option |
-| [Anthropic](https://console.anthropic.com/settings/keys) | — | Claude Haiku is the fastest |
-| [Groq](https://console.groq.com/keys) | ✅ Yes | Very fast inference, generous free tier |
-| [Google AI Studio](https://aistudio.google.com/app/apikey) | ✅ Yes | Gemini 2.0 Flash, free tier |
+| [OpenRouter](https://openrouter.ai/keys) | ✅ Yes | All major models via one key |
+| [OpenAI](https://platform.openai.com/api-keys) | — | gpt-4o-mini is cheapest |
+| [Anthropic](https://console.anthropic.com/settings/keys) | — | Claude Haiku is fastest |
+| [Groq](https://console.groq.com/keys) | ✅ Yes | Very fast, generous free tier |
+| [Google AI Studio](https://aistudio.google.com/app/apikey) | ✅ Yes | Gemini 2.0 Flash |
 | [Mistral](https://console.mistral.ai/) | — | mistral-small is affordable |
 | [DeepSeek](https://platform.deepseek.com/) | — | Strong reasoning at low cost |
-| [Ollama](https://ollama.com/) | ✅ Fully local | No API key, no internet. `ollama serve` first. |
-
-**Using Ollama (fully offline):**
+| [Ollama](https://ollama.com/) | ✅ Fully local | No API key. `ollama serve` first. |
 
 ```bash
-# 1. Install Ollama and pull a model
+# Fully offline with Ollama:
 ollama pull llama3.2
-
-# 2. Run the serve command
 ollama serve
-
-# 3. In bujji onboard, select "ollama" and model "llama3.2"
+python main.py onboard   # select "ollama", model "llama3.2"
 ```
 
 ---
@@ -771,55 +656,33 @@ ollama serve
 ### Telegram
 
 ```bash
-python main.py setup-telegram   # interactive setup
-python main.py gateway           # starts the bot
+python main.py setup-telegram
+python main.py gateway
 ```
 
-Use `allow_from` in config (or the web UI) to whitelist specific Telegram user IDs. Without a whitelist, anyone who finds your bot's username can use it. Find your user ID by messaging [@userinfobot](https://t.me/userinfobot) on Telegram.
+Use `allow_from` to whitelist specific Telegram user IDs. Find yours by messaging [@userinfobot](https://t.me/userinfobot).
 
 ### Discord
 
 ```bash
 pip install discord.py
+# Add token to config, then:
+python main.py gateway
 ```
-
-Enable Discord and add your bot token in Setup → Discord, or in `~/.bujji/config.json`:
-
-```json
-"channels": {
-  "discord": {
-    "enabled": true,
-    "token": "your-discord-bot-token",
-    "allow_from": ["your_server_channel_id"]
-  }
-}
-```
-
-Then: `python main.py gateway`
-
-If `discord.py` is not installed, bujji skips Discord and continues with Telegram and the web UI — it never crashes.
 
 ### Adding a new channel
 
 1. Create `bujji/connections/myplatform.py`
-2. Implement a class with a `.run()` method (blocking loop, designed for a daemon thread)
-3. Wire it into `main.py`'s `cmd_gateway()` following the Telegram pattern
+2. Implement a class with a `.run()` blocking method
+3. Wire it into `cmd_gateway()` in `main.py` following the Telegram pattern
 
 ```python
-# bujji/connections/myplatform.py
-from bujji.session import SessionManager
-
 class MyPlatformChannel:
     def __init__(self, token: str, cfg: dict, mgr: SessionManager):
-        self.token = token
-        self.cfg   = cfg
-        self.mgr   = mgr
-
+        ...
     def run(self):
-        # polling / event loop — runs in a daemon thread
         while True:
-            messages = self.poll()
-            for msg in messages:
+            for msg in self.poll():
                 session = self.mgr.get(msg.user_id)
                 reply   = session.run(msg.text)
                 self.send(msg.user_id, reply)
@@ -831,7 +694,7 @@ class MyPlatformChannel:
 
 ```
 bujji/
-├── main.py                     CLI entry point — 6 commands
+├── main.py                     CLI — 7 commands including new-tool
 │
 ├── bujji/
 │   ├── agent.py                AgentLoop · HeartbeatService · CronService
@@ -847,8 +710,8 @@ bujji/
 │   │   ├── web.py              web_search
 │   │   ├── file_ops.py         read / write / append / list / delete
 │   │   ├── memory.py           read / append / update USER.md
-│   │   ├── utils.py            get_time, message
-│   │   ├── notion.py           9 Notion tools
+│   │   ├── utils.py            get_time · message
+│   │   ├── subagents.py        spawn_subagent · agent_pipeline
 │   │   └── TEMPLATE.py         Copy-paste starting point for new tools
 │   │
 │   └── connections/
@@ -858,7 +721,7 @@ bujji/
 ├── ui/
 │   └── index.html              Single-file web UI — no build step
 │
-└── workspace/                  Your personal agent workspace
+└── workspace/
     ├── SOUL.md
     ├── IDENTITY.md
     ├── USER.md
@@ -870,17 +733,17 @@ bujji/
 
 ### Key design decisions
 
-**Why only `requests` as a core dependency?**  
-The core agent, server, and all built-in tools including Telegram run on `requests` alone. This means bujji can run on any Python 3.9+ environment — Raspberry Pi OS, minimal cloud VMs, offline machines — without a complex install step.
+**Why only `requests` as a core dependency?**
+The core agent, server, and all built-in tools run on `requests` alone — bujji runs on any Python 3.9+ environment, including Raspberry Pi OS and minimal cloud VMs, without a complex install.
 
-**Why hot-reload?**  
-The tool iteration loop is: write code → save → test. Not: write code → save → restart → wait → test. `ToolRegistry` rescans `bujji/tools/` on every message using mtimes, reloading only changed files. The same applies to skills.
+**Why hot-reload?**
+The tool iteration loop is: write → save → test. Not: write → save → restart → wait → test. `ToolRegistry` rescans `bujji/tools/` on every message using file mtimes, reloading only changed files.
 
-**Why plain Markdown for memory?**  
-`USER.md` is just a text file. You can read it, edit it, grep it, version it with git. The LLM can read and write it through the memory tools. No vector DB, no embeddings, no special format.
+**Why plain Markdown for memory?**
+`USER.md` is just a text file — readable, editable, grep-able, versionable with git. No vector DB, no embeddings, no special format required.
 
-**Why a single-file web UI?**  
-`ui/index.html` has no build step, no Node.js, no npm. You can open it in a browser directly. The server just serves it as a static file plus a handful of JSON endpoints.
+**Why a single-file web UI?**
+`ui/index.html` has no build step, no Node.js, no npm. The server serves it as a static file alongside a small set of JSON endpoints.
 
 ---
 
@@ -888,49 +751,35 @@ The tool iteration loop is: write code → save → test. Not: write code → sa
 
 Contributions are welcome — especially new tools, skills, and connection integrations.
 
-### Getting started
-
 ```bash
 git clone https://github.com/MithilSaiReddy/bujji.git
 cd bujji
 pip install requests
-python main.py onboard   # configure with any free provider (Google, Groq, OpenRouter)
+python main.py onboard   # any free provider works (Google, Groq, OpenRouter, Ollama)
 ```
-
-Ollama works fully offline if you prefer not to use an API key during development.
 
 ### What to contribute
 
-- **Tools** — integrations with external services in `bujji/tools/`
-- **Skills** — Markdown instruction sets for specific domains
+- **Tools** — integrations in `bujji/tools/` (use `python main.py new-tool <name>` to scaffold)
+- **Skills** — Markdown instruction sets for domains (Python, SQL, DevOps, etc.)
 - **Connections** — messaging platform integrations in `bujji/connections/`
-- **Bug fixes** — especially around streaming, retry, or memory edge cases
+- **Bug fixes** — streaming, retry, memory edge cases
 - **Documentation** — usage examples, tutorials, translated docs
 
 ### Rules
 
-**The core must stay lean.** New code inside `bujji/` core (agent, server, session, llm, config, identity) must not add pip dependencies beyond `requests`. The agent must be runnable with `pip install requests` only, always.
+**The core must stay lean.** New code inside the bujji core (agent, server, session, llm, config, identity) must not add pip dependencies beyond `requests`.
 
-**Tool integrations may add optional dependencies**, but they must:
-- Import them lazily inside the function (not at module level)
-- Print a clear, actionable install message if the package is missing
-- Never crash the core agent
+**Tool integrations may add optional dependencies**, but must import them lazily and print a clear install message if missing. They must never crash the core agent.
 
-**Keep it simple.** Small, focused commits. One feature or fix per PR. If a change requires extensive explanation, that's a sign it might be too complex.
-
-**Test with Ollama.** It runs fully offline — no API key needed. If your change breaks `python main.py agent` with Ollama, it needs to be fixed before merging.
-
-### Submitting
+**Test with Ollama.** It runs fully offline — no API key needed. If `python main.py agent` breaks with Ollama, it needs to be fixed before merging.
 
 ```bash
-git checkout -b feature/your-feature-name
-# make changes
+git checkout -b feature/your-feature
 git commit -m "Add GitHub issues tool"
-git push origin feature/your-feature-name
-# open a pull request on GitHub
+git push origin feature/your-feature
+# open a pull request
 ```
-
-Include in your PR description: what it does, how to test it, and what config keys it requires (if any).
 
 ---
 
@@ -945,18 +794,19 @@ Include in your PR description: what it does, how to test it, and what config ke
 - [x] Telegram + Discord connections
 - [x] Heartbeat and cron background services
 - [x] Skills marketplace
-- [x] Notion integration (9 tools)
-- [x] Notion key in Setup tab
+- [x] Sub-agents (`spawn_subagent`, `agent_pipeline`)
+- [x] `python main.py new-tool <name>` scaffold generator
+- [x] `param()` + `HttpClient` — zero-boilerplate tool creation
 
 ### Next
 - [ ] Tools marketplace (GitHub, Gmail, Google Calendar, Linear)
 - [ ] Channels marketplace (Slack, WhatsApp, Email)
-- [ ] Multi-agent support
 - [ ] Voice input/output
+- [ ] Better memory — semantic search over USER.md
 - [ ] Mobile web UI improvements
 
 ### Future
-- [ ] Plugin SDK — standardized packaging for marketplace submissions
+- [ ] Plugin SDK — standardised packaging for marketplace submissions
 - [ ] RAG over local documents (zero-cloud, local vector index)
 - [ ] Skill and tool versioning
 

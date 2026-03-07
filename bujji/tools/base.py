@@ -1,63 +1,13 @@
 """
-bujji/tools/base.py  —  v3
+bujji/tools/base.py  —  v3.1
 
 ToolContext · register_tool · ToolRegistry
-+ param()      — one-liner parameter declaration (kills JSON schema boilerplate)
++ param()             — one-liner parameter declaration (kills JSON schema boilerplate)
 + ToolContext.cred()  — clean credential access with friendly missing-key error
-+ HttpClient   — zero-boilerplate HTTP for any REST API
++ HttpClient          — zero-boilerplate HTTP for any REST API
 
-──────────────────────────────────────────────────────────────────────────────
-BEFORE (v2):
-──────────────────────────────────────────────────────────────────────────────
-    @register_tool(
-        description="Search Notion pages.",
-        parameters={
-            "type": "object",
-            "required": ["query"],
-            "properties": {
-                "query":       {"type": "string",  "description": "Search query"},
-                "max_results": {"type": "integer", "description": "Max results"},
-            }
-        }
-    )
-    def notion_search(query: str, max_results: int = 5, _ctx: ToolContext = None) -> str:
-        api_key = _ctx.cfg.get("tools", {}).get("notion", {}).get("api_key", "")
-        if not api_key:
-            return "[Notion] API key not configured. Add it in Settings → Tools."
-        import requests
-        r = requests.get("https://api.notion.com/v1/search",
-                         headers={"Authorization": f"Bearer {api_key}",
-                                  "Notion-Version": "2022-06-28"},
-                         json={"query": query, "page_size": max_results},
-                         timeout=10)
-        r.raise_for_status()
-        ...
-
-──────────────────────────────────────────────────────────────────────────────
-AFTER (v3):
-──────────────────────────────────────────────────────────────────────────────
-    from bujji.tools.base import register_tool, param, ToolContext, HttpClient
-
-    @register_tool(
-        description="Search Notion pages.",
-        params=[
-            param("query", "Search query"),
-            param("max_results", "Max results to return", type="integer", default=5),
-        ]
-    )
-    def notion_search(query: str, max_results: int = 5, _ctx: ToolContext = None) -> str:
-        notion = HttpClient(
-            base_url = "https://api.notion.com/v1",
-            headers  = {
-                "Authorization":  "Bearer " + _ctx.cred("notion.api_key"),
-                "Notion-Version": "2022-06-28",
-            }
-        )
-        data = notion.post("/search", json={"query": query, "page_size": max_results})
-        ...
-
-That's it. No JSON schema. No manual cred digging. No requests boilerplate.
-See tools/TEMPLATE.py for a full copy-paste starting point.
+Fix in v3.1: HttpClient._url() no longer strips leading slash from path,
+             preventing base_url + path merging into e.g. "/v1search" instead of "/v1/search"
 """
 from __future__ import annotations
 
@@ -90,10 +40,10 @@ def param(
 
     Examples
     ────────
-    param("query",   "Search query")                          # required string
+    param("query",   "Search query")                               # required string
     param("limit",   "Max results",  type="integer", default=10)   # optional int
     param("status",  "Task status",  enum=["open", "closed"])      # enum string
-    param("tags",    "Tag list",     type="array", default=[])     # optional array
+    param("tags",    "Tag list",     type="array",   default=[])   # optional array
     param("verbose", "Debug output", type="boolean", default=False)
     """
     if default is not _MISSING:
@@ -138,8 +88,8 @@ class ToolCredentialError(RuntimeError):
 class ToolContext:
     cfg:             dict
     workspace:       Path
-    restrict:        bool                                  = False
-    send_message_fn: Optional[Callable[[str], None]]      = None
+    restrict:        bool                                   = False
+    send_message_fn: Optional[Callable[[str], None]]       = None
     on_tool_start:   Optional[Callable[[str, dict], None]] = None
     on_tool_done:    Optional[Callable[[str, str],  None]] = None
 
@@ -153,13 +103,12 @@ class ToolContext:
 
         Examples
         ────────
-        _ctx.cred("notion.api_key")         → cfg["tools"]["notion"]["api_key"]
-        _ctx.cred("gmail.access_token")     → cfg["tools"]["gmail"]["access_token"]
-        _ctx.cred("openweather.api_key")    → cfg["tools"]["openweather"]["api_key"]
+        _ctx.cred("notion.api_key")       → cfg["tools"]["notion"]["api_key"]
+        _ctx.cred("gmail.access_token")   → cfg["tools"]["gmail"]["access_token"]
+        _ctx.cred("openweather.api_key")  → cfg["tools"]["openweather"]["api_key"]
 
         If the value is missing and required=True (default) a ToolCredentialError
-        is raised — which becomes a clean "[Tool] ... not configured" message that
-        the LLM sees and can relay to the user.
+        is raised — which becomes a clean "not configured" message the LLM sees.
         """
         parts = dotpath.split(".")
         if len(parts) != 2:
@@ -200,9 +149,9 @@ class HttpClient:
     Thin, synchronous HTTP client for REST APIs.
 
     • Auto-parses JSON responses
-    • Clean error messages (includes status code + body)
-    • Supports base_url so you only write paths in each call
-    • All methods accept arbitrary **kwargs passed to requests
+    • Clean error messages (includes status code + body snippet)
+    • base_url so you only write paths in each call
+    • All methods accept arbitrary **kwargs forwarded to requests
 
     Usage
     ─────
@@ -213,10 +162,9 @@ class HttpClient:
             "Notion-Version": "2022-06-28",
         },
     )
-
     pages  = client.get("/search", json={"query": "meeting notes"})
     result = client.post("/pages", json={...})
-    client.patch("/pages/{id}", json={"archived": True})
+    client.patch(f"/pages/{page_id}", json={"archived": True})
     """
 
     def __init__(
@@ -225,10 +173,10 @@ class HttpClient:
         headers:  dict | None = None,
         timeout:  int = 15,
     ):
-        self.base_url = base_url.rstrip("/")
+        self.base_url = base_url.rstrip("/")   # strip trailing slash once
         self.headers  = headers or {}
         self.timeout  = timeout
-        self._session = None   # lazy-init
+        self._session = None                   # lazy-init
 
     def _sess(self):
         if self._session is None:
@@ -237,16 +185,32 @@ class HttpClient:
                 self._session = requests.Session()
                 self._session.headers.update(self.headers)
             except ImportError:
-                raise RuntimeError(
-                    "requests not installed.\n"
-                    "Run: pip install requests"
-                )
+                raise RuntimeError("requests not installed.\nRun: pip install requests")
         return self._session
 
     def _url(self, path: str) -> str:
+        """
+        Merge base_url + path correctly.
+
+        ✓  base="https://api.notion.com/v1"  path="/search"
+           → "https://api.notion.com/v1/search"
+
+        ✓  base="https://api.example.com"    path="users/me"
+           → "https://api.example.com/users/me"
+
+        ✓  absolute path passed directly
+           → returned as-is
+        """
         if path.startswith("http"):
-            return path          # absolute URL — use as-is
-        return self.base_url + ("/" if not path.startswith("/") else "") + path.lstrip("/")
+            return path                        # absolute URL — use as-is
+
+        # Ensure exactly one slash between base and path
+        # base already has no trailing slash (stripped in __init__)
+        # path may or may not have a leading slash — normalise to always have one
+        if not path.startswith("/"):
+            path = "/" + path
+
+        return self.base_url + path            # "base" + "/path"  ✓
 
     def _call(self, method: str, path: str, **kwargs) -> Any:
         import requests as _req
@@ -259,26 +223,22 @@ class HttpClient:
                 "Check your network connection and the API base URL."
             )
         except _req.exceptions.Timeout:
-            raise RuntimeError(
-                f"Request to {url} timed out after {self.timeout}s."
-            )
+            raise RuntimeError(f"Request to {url} timed out after {self.timeout}s.")
 
         if not r.ok:
-            # Try to extract a useful message from the response body
             try:
                 body = r.json()
                 msg  = (
-                    body.get("message") or
-                    body.get("error", {}).get("message") if isinstance(body.get("error"), dict) else None or
-                    body.get("error") or
-                    body.get("detail") or
-                    r.text[:300]
+                    body.get("message")
+                    or (body.get("error", {}).get("message") if isinstance(body.get("error"), dict) else None)
+                    or body.get("error")
+                    or body.get("detail")
+                    or r.text[:300]
                 )
             except Exception:
                 msg = r.text[:300]
             raise RuntimeError(f"HTTP {r.status_code} from {url}: {msg}")
 
-        # Return parsed JSON if possible, raw text otherwise
         ct = r.headers.get("Content-Type", "")
         if "json" in ct:
             return r.json()
@@ -305,7 +265,7 @@ class HttpClient:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  register_tool — unchanged API, now accepts params= shorthand
+#  register_tool — accepts both params= shorthand and raw parameters=
 # ─────────────────────────────────────────────────────────────────────────────
 
 def register_tool(
@@ -316,28 +276,28 @@ def register_tool(
     """
     Decorator that registers a Python function as an AI tool.
 
-    You can declare parameters in two ways:
+    Two ways to declare parameters:
 
-    1. The new way — use param() helpers (recommended):
-       @register_tool(
-           description="...",
-           params=[
-               param("city",  "City name"),
-               param("units", "celsius or fahrenheit", enum=["celsius","fahrenheit"], default="celsius"),
-           ]
-       )
+    ── New way (recommended) ────────────────────────────────────────────────
+    @register_tool(
+        description="Get weather for a city.",
+        params=[
+            param("city",  "City name"),
+            param("units", "celsius or fahrenheit",
+                  enum=["celsius", "fahrenheit"], default="celsius"),
+        ]
+    )
 
-    2. The old way — raw JSON schema (still works, backwards compatible):
-       @register_tool(
-           description="...",
-           parameters={
-               "type": "object",
-               "required": ["city"],
-               "properties": {"city": {"type": "string", "description": "City name"}},
-           }
-       )
+    ── Old way (still works — backwards compatible) ─────────────────────────
+    @register_tool(
+        description="Get weather for a city.",
+        parameters={
+            "type": "object",
+            "required": ["city"],
+            "properties": {"city": {"type": "string", "description": "City name"}},
+        }
+    )
     """
-    # params= shorthand takes priority over raw parameters=
     if params is not None:
         schema_dict = _params_to_schema(params)
     elif parameters is not None:
@@ -370,7 +330,7 @@ _MODULE_MTIMES: dict[str, float]                 = {}
 def _autodiscover(tools_pkg_path: Path, pkg_name: str) -> None:
     """
     Import (or reload) every *.py module in tools/ so @register_tool
-    decorators fire.  Skips unchanged files for performance.
+    decorators fire.  Skips unchanged files via mtime for performance.
     """
     for _, module_name, _ in pkgutil.iter_modules([str(tools_pkg_path)]):
         if module_name in ("base", "TEMPLATE"):
@@ -428,13 +388,13 @@ class ToolRegistry:
         print(f"[INFO] Tools loaded ({len(tool_names)}): {', '.join(tool_names)}", file=sys.stderr)
 
     def schema(self) -> list[dict]:
-        """Return OpenAI tool-call schema list.  Triggers hot-reload check."""
+        """Return OpenAI tool-call schema list. Triggers hot-reload check."""
         self._refresh()
         return [schema for _, schema in _REGISTRY.values()]
 
     def call(self, name: str, args: dict) -> str:
         """
-        Dispatch a tool by name.  Always returns str — never raises.
+        Dispatch a tool by name. Always returns str — never raises.
         ToolCredentialError gets a clean "not configured" message.
         """
         self._refresh()
@@ -459,7 +419,7 @@ class ToolRegistry:
         try:
             raw = fn(**call_args)
         except ToolCredentialError as e:
-            raw = str(e)          # already a friendly message — no [TOOL ERROR] prefix
+            raw = str(e)
         except TypeError as e:
             raw = (
                 f"[TOOL ERROR] Wrong arguments for '{name}': {e}\n"

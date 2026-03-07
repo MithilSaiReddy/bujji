@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-main.py — bujji v2 CLI entry point
+main.py — bujji CLI entry point
 
 Usage:
     python main.py onboard              # First-time setup wizard
-    python main.py serve                # ← NEW: open web UI in browser
+    python main.py serve                # Web UI → http://localhost:7337
     python main.py agent -m "..."       # Single message
     python main.py agent                # Interactive chat
+    python main.py new-tool <name>      # Scaffold a new tool file
     python main.py setup-telegram       # Configure Telegram bot
     python main.py gateway              # Start messaging gateway
     python main.py status               # Show config and status
@@ -129,6 +130,171 @@ def cmd_serve(args) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  NEW-TOOL  — scaffold a new tool file
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Auth pattern templates
+_AUTH_PATTERNS = {
+    "bearer":  '"Authorization": "Bearer " + _ctx.cred("{svc}.api_key")',
+    "token":   '"Authorization": "token " + _ctx.cred("{svc}.api_key")',
+    "x-api":   '"X-API-Key": _ctx.cred("{svc}.api_key")',
+    "param":   "# Pass key as a query param:  params={{\"apikey\": _ctx.cred(\"{svc}.api_key\")}}",
+    "none":    "# No auth needed",
+}
+
+_TOOL_TEMPLATE = '''\
+"""
+bujji/tools/{filename}.py
+
+{service_title} tools for bujji.
+
+Setup
+─────
+1. Get your API key from: {api_url}
+2. Add to ~/.bujji/config.json:
+       "tools": {{
+         "{svc}": {{
+           "api_key": "your-key-here"
+         }}
+       }}
+3. Save this file — bujji hot-reloads it instantly. No restart needed.
+
+Tools
+─────
+{tool_list}
+"""
+from __future__ import annotations
+
+from bujji.tools.base import HttpClient, ToolContext, param, register_tool
+
+
+# ── Shared API client ─────────────────────────────────────────────────────────
+
+def _{svc}_client(_ctx: ToolContext) -> HttpClient:
+    return HttpClient(
+        base_url = "{base_url}",
+        headers  = {{
+            {auth_header},
+            "Content-Type": "application/json",
+        }},
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  TOOLS
+# ─────────────────────────────────────────────────────────────────────────────
+
+@register_tool(
+    description=(
+        "TODO: describe what this tool does and when the agent should use it. "
+        "Be specific — the LLM uses this description to decide when to call it."
+    ),
+    params=[
+        param("query", "Search query or input"),
+        param("limit", "Max results to return", type="integer", default=10),
+    ]
+)
+def {first_tool}(query: str, limit: int = 10, _ctx: ToolContext = None) -> str:
+    client  = _{svc}_client(_ctx)
+    results = client.get("/TODO_endpoint", params={{"q": query, "limit": limit}})
+
+    items = results.get("items", [])          # ← adjust to actual response shape
+    if not items:
+        return f"No results for '{{query}}'."
+
+    lines = [f"• {{item.get('name', '?')}}  —  {{item.get('url', '')}}" for item in items]
+    return "\\n".join(lines)
+
+
+# Add more tools below following the same pattern.
+# Each function decorated with @register_tool becomes available to the agent
+# immediately on next message — no restart needed.
+#
+# Checklist before shipping:
+#   [x] Function name follows  service_action  pattern
+#   [x] description= is a full sentence
+#   [x] Every param() has a useful description
+#   [x] Returns a non-empty string even when there are no results
+#   [ ] Add credential key to DEFAULT_CONFIG in bujji/config.py
+#   [ ] Add credential masking in bujji/server.py  (_mask_config)
+#   [ ] Add UI input card in ui/index.html  (see README → Credentials)
+'''
+
+
+def cmd_new_tool(args) -> None:
+    import pathlib
+    import re
+
+    raw_name = args.name.strip().lower()
+    # Sanitise: only letters, digits, underscores
+    svc = re.sub(r"[^a-z0-9_]", "_", raw_name).strip("_")
+    if not svc:
+        sys.exit("ERROR: invalid tool name. Use letters and underscores, e.g. 'weather' or 'github'.")
+
+    service_title = svc.replace("_", " ").title()
+    filename      = svc
+    out_path      = pathlib.Path(__file__).parent / "bujji" / "tools" / f"{filename}.py"
+
+    print(f"\n{LOGO}  New tool scaffold: {service_title}\n{'─'*52}")
+
+    if out_path.exists():
+        overwrite = input(f"  ⚠️  bujji/tools/{filename}.py already exists. Overwrite? (y/N): ").strip().lower()
+        if overwrite != "y":
+            print("  Aborted.")
+            return
+
+    # ── Ask 4 quick questions ─────────────────────────────────────────────
+
+    api_url  = input(f"  API docs / key URL (Enter to skip): ").strip() or "https://example.com/api"
+    base_url = input(f"  API base URL (e.g. https://api.{svc}.com/v1): ").strip()
+    if not base_url:
+        base_url = f"https://api.{svc}.com/v1"
+
+    print(f"\n  Auth pattern:")
+    print(f"    1. Bearer token    (Authorization: Bearer <key>)  ← most common")
+    print(f"    2. Token prefix    (Authorization: token <key>)")
+    print(f"    3. X-API-Key       (X-API-Key: <key>)")
+    print(f"    4. Query param     (?apikey=<key>)")
+    print(f"    5. No auth needed")
+    auth_choice = input("  Choose (Enter = 1): ").strip() or "1"
+    auth_map    = {"1": "bearer", "2": "token", "3": "x-api", "4": "param", "5": "none"}
+    auth_key    = auth_map.get(auth_choice, "bearer")
+    auth_header = _AUTH_PATTERNS[auth_key].format(svc=svc)
+
+    first_tool_default = f"{svc}_search"
+    first_tool = input(f"\n  First tool function name (Enter = {first_tool_default}): ").strip()
+    if not first_tool:
+        first_tool = first_tool_default
+    first_tool = re.sub(r"[^a-z0-9_]", "_", first_tool.lower()).strip("_")
+
+    # ── Write the file ────────────────────────────────────────────────────
+
+    content = _TOOL_TEMPLATE.format(
+        filename      = filename,
+        service_title = service_title,
+        svc           = svc,
+        api_url       = api_url,
+        base_url      = base_url,
+        auth_header   = auth_header,
+        first_tool    = first_tool,
+        tool_list     = f"  {first_tool}",
+    )
+
+    out_path.write_text(content, encoding="utf-8")
+
+    print(f"\n  ✅ Created: bujji/tools/{filename}.py")
+    print(f"\n  Next steps:")
+    print(f"    1. Open bujji/tools/{filename}.py and fill in your API endpoints")
+    print(f"    2. Add your credential to ~/.bujji/config.json:")
+    print(f'         "tools": {{ "{svc}": {{ "api_key": "your-key" }} }}')
+    print(f"    3. Add the key to DEFAULT_CONFIG in bujji/config.py")
+    print(f"    4. Add masking in bujji/server.py  (_mask_config)")
+    print(f"    5. Add a UI card in ui/index.html  (see README → Credentials)")
+    print(f"\n  The tool is already live — no restart needed.")
+    print(f"  Test it:  python main.py agent -m 'use {first_tool} to search for hello'\n")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  SETUP-TELEGRAM
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -163,17 +329,16 @@ def cmd_agent(args) -> None:
     stream     = not getattr(args, "no_stream", False)
     session_id = "cli"
 
-    # CLI callbacks
+    import json
+    def json_preview(d):
+        return json.dumps(d, ensure_ascii=False)[:80]
+
     callbacks = {
         "on_token":      lambda t: print(t, end="", flush=True),
         "on_tool_start": lambda n, a: print(f"\n{LOGO} [Tool] {n}({json_preview(a)})", file=sys.stderr),
         "on_tool_done":  lambda n, r: print(f"  → {r[:120].replace(chr(10),' ')}", file=sys.stderr),
         "on_error":      lambda e: print(f"\n[ERROR] {e}", file=sys.stderr),
     }
-
-    import json
-    def json_preview(d):
-        return json.dumps(d, ensure_ascii=False)[:80]
 
     agent = mgr.get(session_id, callbacks=callbacks)
 
@@ -228,7 +393,6 @@ def cmd_gateway(args) -> None:
         from bujji.session import SessionManager
         cfg = load_config()
         mgr = SessionManager(cfg)
-        # Warm up a default agent (validates config early)
         agent = mgr.get("gateway:default")
     except RuntimeError as e:
         sys.exit(f"ERROR: {e}")
@@ -333,11 +497,13 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""
   examples:
-    python main.py onboard                       # first-time setup
-    python main.py serve                         # web UI (recommended)
+    python main.py onboard                        # first-time setup
+    python main.py serve                          # web UI (recommended)
     python main.py agent -m "What's my disk usage?"
-    python main.py agent                         # interactive chat
-    python main.py gateway                       # Telegram / Discord bot
+    python main.py agent                          # interactive chat
+    python main.py new-tool weather               # scaffold a new tool
+    python main.py new-tool github                # scaffold github tool
+    python main.py gateway                        # Telegram / Discord bot
         """),
     )
     parser.add_argument("--version", action="version", version=f"bujji {__version__}")
@@ -356,6 +522,17 @@ def main() -> None:
     p_agent.add_argument("-m", "--message", type=str, metavar="TEXT")
     p_agent.add_argument("--no-stream", action="store_true")
 
+    p_new_tool = sub.add_parser(
+        "new-tool",
+        help="Scaffold a new tool file (e.g. python main.py new-tool weather)",
+    )
+    p_new_tool.add_argument(
+        "name",
+        type=str,
+        metavar="NAME",
+        help="Service name for the tool, e.g. 'weather', 'github', 'linear'",
+    )
+
     args = parser.parse_args()
 
     cmds = {
@@ -363,6 +540,7 @@ def main() -> None:
         "setup-telegram": cmd_setup_telegram,
         "serve":          cmd_serve,
         "agent":          cmd_agent,
+        "new-tool":       cmd_new_tool,
         "gateway":        cmd_gateway,
         "status":         cmd_status,
     }
