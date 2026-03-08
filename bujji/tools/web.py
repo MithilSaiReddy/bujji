@@ -1,14 +1,19 @@
 """
-bujji/tools/web.py  —  v3  (rewritten with new param() shorthand)
+bujji/tools/web.py
+
+Setup
+─────
+pip install ddgs
 """
-from bujji.tools.base import HttpClient, ToolContext, param, register_tool
+from bujji.tools.base import ToolContext, param, register_tool
 
 
 @register_tool(
     description=(
-        "Search the web for up-to-date information using Brave Search. "
-        "Use whenever you need current facts, recent news, documentation, "
-        "prices, or anything beyond your training data."
+        "ALWAYS use this tool when the user asks about ANY current, recent, or "
+        "real-world information — news, people, prices, weather, sports, politics, "
+        "or ANYTHING that could have changed. You MUST call this tool instead of "
+        "answering from memory. Do not say you cannot search."
     ),
     params=[
         param("query",       "The search query"),
@@ -16,43 +21,30 @@ from bujji.tools.base import HttpClient, ToolContext, param, register_tool
     ]
 )
 def web_search(query: str, max_results: int = 5, _ctx: ToolContext = None) -> str:
-    cfg     = _ctx.cfg if _ctx else {}
-    api_key = _ctx.cred("web.api_key", required=False) if _ctx else ""
-
-    if not api_key:
-        safe_q = query.replace(" ", "+")
+    try:
+        from ddgs import DDGS
+    except ImportError:
         return (
-            "[Web Search] Brave API key not configured.\n"
-            "  → Get a free key (2,000 queries/month): https://brave.com/search/api\n"
-            "  → Add it in the web UI: Settings → Tools → Web Search\n"
-            f"  → Manual search: https://search.brave.com/search?q={safe_q}"
+            "[web_search] 'ddgs' is not installed.\n"
+            "Run: pip install ddgs"
         )
 
-    brave  = HttpClient(
-        base_url = "https://api.search.brave.com/res/v1",
-        headers  = {
-            "Accept":               "application/json",
-            "Accept-Encoding":      "gzip",
-            "X-Subscription-Token": api_key,
-        },
-    )
+    max_results = min(int(max_results), 20)
 
     try:
-        data    = brave.get("/web/search", params={"q": query, "count": min(int(max_results), 20)})
-        results = data.get("web", {}).get("results", [])
-    except RuntimeError as e:
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=max_results))
+    except Exception as e:
         return f"[Web Search Error] {e}"
 
     if not results:
-        return f"No search results found for: {query}"
+        return f"No results found for: '{query}'"
 
     lines = []
-    for i, res in enumerate(results, 1):
-        title = res.get("title", "(no title)")
-        url   = res.get("url", "")
-        desc  = res.get("description", "").strip()
-        lines.append(f"{i}. {title}\n   {url}")
-        if desc:
-            lines.append(f"   {desc}")
+    for i, r in enumerate(results, 1):
+        title   = r.get("title", "(no title)")
+        url     = r.get("href",  "")
+        body = r.get("body", "")
+        snippet = " ".join(body) if isinstance(body, list) else str(body).strip()
 
-    return "\n".join(lines)
+    return "\n\n".join(lines)

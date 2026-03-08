@@ -92,7 +92,7 @@ python main.py agent        # Terminal chat
 |---|---|
 | Core agent, web UI, terminal chat | *(none — only `requests`)* |
 | Telegram bot | *(none — uses `requests`)* |
-| Web search | *(none)* + [Brave API key](https://brave.com/search/api) (free, 2k/month) |
+| Web search | `pip install ddgs` — no API key needed |
 | Discord bot | `pip install discord.py` |
 | Community tools | Varies per tool — each prints a clear install message if missing |
 
@@ -477,7 +477,7 @@ This is the pattern for any multi-step automated workflow.
 | Tool | Description |
 |---|---|
 | `exec` | Run shell commands |
-| `web_search` | Search the web (Brave API — [free key](https://brave.com/search/api)) |
+| `web_search` | Search the web via DuckDuckGo — no API key needed (`pip install ddgs`) |
 | `read_file` | Read a file's contents |
 | `write_file` | Write or overwrite a file (atomic) |
 | `append_file` | Append to a file |
