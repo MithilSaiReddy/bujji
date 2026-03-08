@@ -797,6 +797,7 @@ git push origin feature/your-feature
 - [x] Sub-agents (`spawn_subagent`, `agent_pipeline`)
 - [x] `python main.py new-tool <name>` scaffold generator
 - [x] `param()` + `HttpClient` — zero-boilerplate tool creation
+- [x] DuckDuckGo web search — no API key needed
 
 ### Next
 - [ ] Tools marketplace (GitHub, Gmail, Google Calendar, Linear)
