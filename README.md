@@ -80,7 +80,7 @@ python3 -m venv venv && source venv/bin/activate   # Linux or Macos
 
  
 python -m venv venv
-source venv/Scripts/activate   # Windows
+.\venv\Scripts\activate.bat   # Windows
 
 
 # 3. Install core dependency
