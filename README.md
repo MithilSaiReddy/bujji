@@ -75,12 +75,12 @@ git clone https://github.com/MithilSaiReddy/bujji.git
 cd bujji
 
 # 2.Create a virtual environment using venv
-  # Linux or Macos
-  python3 -m venv venv && source venv/bin/activate
+  
+python3 -m venv venv && source venv/bin/activate   # Linux or Macos
 
-  # Windows
-  python -m venv venv
-  source venv/Scripts/activate
+ 
+python -m venv venv
+source venv/Scripts/activate   # Windows
 
 
 # 3. Install core dependency
