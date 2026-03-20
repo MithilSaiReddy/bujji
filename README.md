@@ -74,13 +74,22 @@ The core philosophy: **a small agent you own and understand beats a large agent 
 git clone https://github.com/MithilSaiReddy/bujji.git
 cd bujji
 
-# 2. Install core dependency
+# 2.Create a virtual environment using venv
+  # Linux or Macos
+  python3 -m venv venv && source venv/bin/activate
+
+  # Windows
+  python -m venv venv
+  source venv/Scripts/activate
+
+
+# 3. Install core dependency
 pip install requests
 
-# 3. Run the setup wizard — configures your LLM provider
+# 4. Run the setup wizard — configures your LLM provider
 python main.py onboard
 
-# 4. Launch
+# 5. Launch
 python main.py serve        # Web UI  →  http://localhost:7337
 # or
 python main.py agent        # Terminal chat
