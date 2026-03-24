@@ -490,6 +490,10 @@ This is the pattern for any multi-step automated workflow.
 | `message` | Push a message to the user mid-task |
 | `spawn_subagent` | Delegate a task to a specialist sub-agent |
 | `agent_pipeline` | Run a chain of sub-agents in sequence |
+| `create_todo` | Break a complex task into numbered subtasks in todo.md |
+| `next_todo` | Get next pending task, auto-mark complete |
+| `list_todos` | List all tasks with completion status |
+| `clear_todos` | Clear completed or all tasks |
 
 ---
 
@@ -546,6 +550,59 @@ Start background services:
 ```bash
 python main.py gateway
 ```
+
+---
+
+## Task Breakdown
+
+Bujji can break complex multi-step tasks into a todo list and work through them automatically.
+
+### How It Works
+
+1. **Create a todo list** — Agent breaks a complex task into numbered subtasks
+2. **Auto-continue** — After each successful tool execution, agent automatically gets the next task
+3. **Done** — Agent continues until all tasks complete or an error occurs
+
+### Example
+
+```
+You: Set up my Python project with pytest and black
+Bujji: (detects multi-step) -> Creates todo.md with 5 tasks
+       -> Executes task 1 -> marks complete -> task 2 -> ...
+       -> All 5 tasks completed!
+```
+
+### Tools
+
+| Tool | Description |
+|---|---|
+| `create_todo(task)` | Break a complex task into numbered subtasks |
+| `next_todo(complete_previous=True)` | Get next pending task, mark previous complete |
+| `list_todos()` | Show all tasks with completion status |
+| `clear_todos(mode="completed")` | Clear completed tasks or all |
+
+### todo.md Format
+
+Tasks are stored in `workspace/todo.md`:
+
+```markdown
+# Todo
+
+1. [ ] Create project directory
+2. [ ] Initialize git repo
+3. [ ] Set up virtual environment
+4. [ ] Configure pytest
+5. [ ] Set up black formatting
+
+---
+Updated: 2026-03-24
+```
+
+### Behavior
+
+- **Auto-continue**: After any successful tool execution, bujji automatically calls `next_todo()` to continue working through pending tasks
+- **Stop on error**: If a task fails, bujji stops and reports the error
+- **Only ask when needed**: User is prompted only for ambiguous input, dangerous operations, or repeated failures
 
 ---
 
@@ -617,6 +674,7 @@ workspace/
 ├── USER.md         Persistent memory — bujji appends automatically, never overwrites
 ├── AGENT.md        Self-description of active tools
 ├── HEARTBEAT.md    Task list bujji runs every 30 minutes
+├── todo.md         Task breakdown and tracking
 ├── skills/
 │   └── my-skill/SKILL.md
 └── cron/

@@ -106,7 +106,7 @@ def build_system_prompt(cfg: dict, skills_loader: SkillsLoader) -> str:
     skills   = skills_loader.get()
 
     sections = [
-        textwrap.dedent(f"""
+            textwrap.dedent(f"""
             You are bujji, an ultra-lightweight personal AI assistant.
             Your workspace is: {ws}
 
@@ -114,11 +114,21 @@ def build_system_prompt(cfg: dict, skills_loader: SkillsLoader) -> str:
             • Web search (Brave API)         • File read / write / append / list / delete
             • Shell command execution         • Current date and time
             • User memory (USER.md)           • Sending messages to the user
+            • Todo list (todo.md)             • Task breakdown and tracking
 
             Always use tools when they'd improve your answer.
             After tool results, synthesise them into a clear, concise reply.
             If a tool returns [TOOL ERROR …], explain the issue and try an alternative.
             Prefer action over lengthy explanation.  Complete the task, then summarise.
+
+            ## Task Mode
+            When a user request has multiple steps (e.g., "set up my dev environment",
+            "build a website", "migrate files"), use create_todo() to break it into
+            numbered subtasks, then use next_todo() to work through them sequentially.
+            After each successful tool execution, call next_todo() to automatically
+            get the next task and continue until all are done.
+            Only ask the user if: input is ambiguous, operation is dangerous, or
+            a task has failed after 2 retries.
         """).strip()
     ]
 
@@ -267,6 +277,17 @@ class AgentLoop:
                     "tool_call_id": tc.get("id", "t0"),
                     "content":      result,
                 })
+
+                # Auto-continue: check for pending todos after successful execution
+                # Only continue if the tool didn't error and todo has pending tasks
+                if not result.startswith("[TOOL ERROR"):
+                    next_result = self.tools.call("next_todo", {"complete_previous": True})
+                    if "[TASK" in next_result or "[DONE]" in next_result:
+                        messages.append({
+                            "role":         "tool",
+                            "tool_call_id": tc.get("id", "t0") + "_next",
+                            "content":      next_result,
+                        })
 
             # Loop → let LLM see the tool results
 

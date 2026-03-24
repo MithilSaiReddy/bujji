@@ -6,15 +6,15 @@
 <title>Bujji</title>
 <style>
 :root{
-  --bg:#0d0f18;--surface:#13161f;--surface2:#1b1f2e;--surface3:#222640;
-  --border:#2a2f47;--accent:#6c63ff;--accent2:#a89cff;--accent3:#c4bbff;
-  --text:#e4e6f4;--muted:#6b7280;--muted2:#9399b0;
-  --green:#34d399;--yellow:#fbbf24;--red:#f87171;--blue:#60a5fa;
-  --user-bg:#2d2060;--bot-bg:#13161f;
-  --radius:12px;--font:'Inter',system-ui,-apple-system,sans-serif;
+  --bg:#ffffff;--surface:#f5f5f5;--surface2:#eeeeee;--surface3:#e0e0e0;
+  --border:#000000;--accent:#000000;--accent2:#333333;--accent3:#555555;
+  --text:#000000;--muted:#666666;--muted2:#888888;
+  --green:#000000;--yellow:#666666;--red:#000000;--blue:#000000;
+  --user-bg:#000000;--user-text:#ffffff;--bot-bg:#ffffff;--bot-text:#000000;
+  --radius:8px;--font:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5}
 
 /* ── Layout ── */
 .app{display:flex;height:100vh}
@@ -31,8 +31,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   padding:14px 16px;display:flex;align-items:center;gap:10px;
   border-bottom:1px solid var(--border);cursor:pointer;user-select:none
 }
-.logo-emoji{font-size:22px;flex-shrink:0}
-.logo-text{font-size:17px;font-weight:700;color:var(--accent2);letter-spacing:-.5px}
+.logo-emoji{font-size:20px;flex-shrink:0;font-weight:700}
+.logo-text{font-size:17px;font-weight:700;color:var(--text);letter-spacing:-.5px}
 .nav{flex:1;padding:6px 0;overflow-y:auto}
 .nav-item{
   display:flex;align-items:center;gap:10px;padding:9px 16px;
@@ -72,10 +72,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   border-radius:20px;background:var(--surface2);border:1px solid var(--border);
   font-size:12px;color:var(--muted)
 }
-.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0}
-.dot.ok{background:var(--green)}
-.dot.warn{background:var(--yellow)}
-.dot.err{background:var(--red)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;border:1px solid var(--border)}
+.dot.ok{background:#000}
+.dot.warn{background:#666}
+.dot.err{background:#000;text-decoration:line-through}
 .messages{
   flex:1;overflow-y:auto;padding:20px;
   display:flex;flex-direction:column;gap:12px
@@ -97,7 +97,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 }
 .msg-time{font-size:11px;color:var(--muted);padding:0 4px}
 .tool-card{
-  background:var(--surface2);border:1px solid var(--border);
+  background:var(--surface);border:1px solid var(--border);
   border-radius:8px;overflow:hidden;font-size:12px;
   margin:4px 0;max-width:460px
 }
@@ -105,19 +105,19 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   padding:7px 12px;display:flex;align-items:center;gap:8px;
   cursor:pointer;user-select:none;transition:background .12s
 }
-.tool-head:hover{background:rgba(108,99,255,.08)}
-.tool-fname{font-weight:600;color:var(--accent2)}
+.tool-head:hover{background:#eee}
+.tool-fname{font-weight:600;color:var(--text)}
 .tool-st{margin-left:auto;font-size:11px;color:var(--muted)}
 .tool-body{
   padding:8px 12px;border-top:1px solid var(--border);
   display:none;font-family:monospace;font-size:11px
 }
 .tool-body.open{display:block}
-.tool-args{color:var(--yellow);white-space:pre-wrap}
-.tool-res{color:var(--green);white-space:pre-wrap;max-height:120px;overflow-y:auto;margin-top:6px}
-.typing{display:flex;gap:4px;padding:10px 14px;align-items:center}
+.tool-args{color:#666;white-space:pre-wrap}
+.tool-res{color:#000;white-space:pre-wrap;max-height:120px;overflow-y:auto;margin-top:6px}
+.typing{display:flex;gap:4px;padding:10px 14px;align-items:center;font-size:12px;color:var(--muted)}
 .typing span{
-  width:7px;height:7px;background:var(--muted);border-radius:50%;
+  width:6px;height:6px;background:var(--muted);border-radius:50%;
   animation:bounce 1.2s infinite
 }
 .typing span:nth-child(2){animation-delay:.2s}
@@ -137,11 +137,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 #msg-input::placeholder{color:var(--muted)}
 .btn-send{
   background:var(--accent);color:#fff;border:none;
-  padding:0 18px;height:42px;border-radius:10px;cursor:pointer;
-  font-size:16px;flex-shrink:0;transition:background .15s;
-  display:flex;align-items:center;justify-content:center
+  padding:0 18px;height:42px;border-radius:8px;cursor:pointer;
+  font-size:14px;flex-shrink:0;transition:background .15s;
+  display:flex;align-items:center;justify-content:center;font-weight:600
 }
-.btn-send:hover{background:#5a52e0}
+.btn-send:hover{background:#333}
 .btn-send:disabled{background:var(--muted);cursor:not-allowed}
 
 /* ── Setup / Settings ── */
@@ -177,8 +177,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   font-size:11px;font-weight:500;padding:2px 8px;border-radius:10px;
   background:var(--surface3);color:var(--muted)
 }
-.card-title .badge.ok{background:rgba(52,211,153,.15);color:var(--green)}
-.card-title .badge.warn{background:rgba(251,191,36,.12);color:var(--yellow)}
+.card-title .badge.ok{background:#000;color:#fff;padding:2px 8px}
+.card-title .badge.warn{background:#666;color:#fff;padding:2px 8px}
 
 /* Form elements */
 .form-group{margin-bottom:14px}
@@ -204,14 +204,14 @@ select.field option{background:var(--surface)}
   padding:10px 14px;background:var(--surface);border:1px solid var(--border);
   border-radius:8px;margin-bottom:14px;cursor:pointer
 }
-.toggle-row:hover{border-color:var(--accent)}
+.toggle-row:hover{border-color:#000}
 .toggle-label{font-size:13px;font-weight:500}
 .toggle-sub{font-size:11px;color:var(--muted);margin-top:1px}
 .toggle{
-  width:36px;height:20px;border-radius:10px;background:var(--surface3);
+  width:36px;height:20px;border-radius:10px;background:#ccc;
   position:relative;transition:background .2s;flex-shrink:0
 }
-.toggle.on{background:var(--accent)}
+.toggle.on{background:#000}
 .toggle::after{
   content:'';position:absolute;width:14px;height:14px;
   background:#fff;border-radius:50%;top:3px;left:3px;transition:left .2s
@@ -229,17 +229,17 @@ select.field option{background:var(--surface)}
 
 /* Buttons */
 .btn{
-  padding:9px 20px;border-radius:9px;cursor:pointer;font-size:13px;
+  padding:9px 20px;border-radius:8px;cursor:pointer;font-size:13px;
   font-weight:600;border:none;transition:all .15s;display:inline-flex;
   align-items:center;gap:7px
 }
 .btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{background:#5a52e0}
+.btn-primary:hover{background:#333}
 .btn-primary:disabled{background:var(--muted);cursor:not-allowed}
-.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
-.btn-ghost:hover{border-color:var(--accent2);color:var(--accent2)}
-.btn-success{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3)}
-.btn-danger{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2)}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:#eee}
+.btn-success{background:#000;color:#fff;border:1px solid #000}
+.btn-danger{background:#fff;color:#000;border:1px solid #000}
 .btn-sm{padding:5px 12px;font-size:12px}
 .btn-row{display:flex;gap:8px;align-items:center;margin-top:16px;flex-wrap:wrap}
 .verify-result{font-size:12px;padding:7px 12px;border-radius:7px;margin-top:8px;display:none}
@@ -352,25 +352,25 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
 <!-- ── Sidebar ── -->
 <div class="sidebar" id="sidebar">
   <div class="sidebar-header" onclick="toggleSidebar()">
-    <span class="logo-emoji">🦞</span>
+    <span class="logo-emoji">[B]</span>
     <span class="logo-text lbl">bujji</span>
   </div>
   <nav class="nav">
     <div class="nav-item active" id="nav-chat"     onclick="go('chat')">
-      <span class="nav-icon">💬</span><span class="lbl">Chat</span>
+      <span class="nav-icon"></span><span class="lbl">Chat</span>
     </div>
     <div class="nav-item"        id="nav-setup"    onclick="go('setup')">
-      <span class="nav-icon">⚙️</span><span class="lbl">Setup</span>
+      <span class="nav-icon"></span><span class="lbl">Setup</span>
       <span class="nav-badge warn lbl" id="setup-badge" style="display:none">!</span>
     </div>
     <div class="nav-item"        id="nav-memory"   onclick="go('memory')">
-      <span class="nav-icon">🧠</span><span class="lbl">Memory</span>
+      <span class="nav-icon"></span><span class="lbl">Memory</span>
     </div>
     <div class="nav-item"        id="nav-skills"   onclick="go('skills')">
-      <span class="nav-icon">🧩</span><span class="lbl">Skills Marketplace</span>
+      <span class="nav-icon"></span><span class="lbl">Skills</span>
     </div>
     <div class="nav-item"        id="nav-tools"    onclick="go('tools')">
-      <span class="nav-icon">🔧</span><span class="lbl">Tools</span>
+      <span class="nav-icon"></span><span class="lbl">Tools</span>
     </div>
   </nav>
   <div class="sidebar-footer">
@@ -387,25 +387,24 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
       <div class="topbar-left">
         <div class="status-pill" id="status-pill">
           <div class="dot" id="status-dot"></div>
-          <span id="status-txt">Connecting…</span>
+          <span id="status-txt">Connecting...</span>
         </div>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost btn-sm" onclick="go('setup')">⚙ Setup</button>
+        <button class="btn btn-ghost btn-sm" onclick="go('setup')">Setup</button>
         <button class="btn btn-ghost btn-sm" onclick="clearChat()">Clear</button>
       </div>
     </div>
     <div class="messages" id="messages">
       <div class="empty" id="chat-empty">
-        <div class="empty-ico">🦞</div>
         <p>Hey! I'm bujji.<br>Ask me anything — I have tools for web search,<br>files, shell commands and more.</p>
       </div>
     </div>
     <div class="input-row">
       <textarea id="msg-input" rows="1"
-        placeholder="Message bujji… (Enter to send, Shift+Enter for newline)"
+        placeholder="Message bujji... (Enter to send, Shift+Enter for newline)"
         onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-      <button class="btn-send" id="btn-send" onclick="sendMessage()">➤</button>
+      <button class="btn-send" id="btn-send" onclick="sendMessage()">Send</button>
     </div>
   </div>
 
@@ -413,13 +412,13 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
   <!-- SETUP + CHANNELS merged -->
   <div class="panel" id="panel-setup">
     <div class="panel-scroll">
-      <div class="panel-title">⚙️ Setup</div>
+      <div class="panel-title">Setup</div>
       <p class="panel-sub">All settings saved to <span id="cfg-path-display" class="cfg-path">~/.bujji/config.json</span></p>
 
       <!-- LLM -->
       <div class="card">
         <div class="card-title">
-          🤖 LLM Provider
+          LLM Provider
           <span class="badge" id="llm-badge">not configured</span>
         </div>
         <div class="form-group">
@@ -454,17 +453,17 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
 
       <!-- Web Search -->
       <div class="card">
-        <div class="card-title">🔍 Web Search <span style="font-weight:400;color:var(--muted)">(optional)</span></div>
+        <div class="card-title">Web Search <span style="font-weight:400;color:var(--muted)">(optional)</span></div>
         <div class="form-group">
           <label>DuckDuckGo search</label>
-          <div class="hint">DuckDuckGo search — no API key needed ✓</div>
+          <div class="hint">DuckDuckGo search — no API key needed</div>
         </div>
       </div>
 
       <!-- Notion -->
       <div class="card">
         <div class="card-title">
-          📓 Notion <span style="font-weight:400;color:var(--muted)">(optional)</span>
+          Notion <span style="font-weight:400;color:var(--muted)">(optional)</span>
           <span class="badge" id="notion-badge" style="display:none">connected</span>
         </div>
         <div class="form-group">
@@ -479,7 +478,7 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
 
       <!-- Workspace -->
       <div class="card">
-        <div class="card-title">📂 Workspace</div>
+        <div class="card-title">Workspace</div>
         <div class="form-group">
           <label>Directory (memory, skills &amp; cron files)</label>
           <input type="text" class="field" id="s-workspace" placeholder="~/.bujji/workspace">
@@ -493,7 +492,7 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
       <!-- Telegram -->
       <div class="card" id="card-telegram">
         <div class="card-title">
-          ✈️ Telegram
+          Telegram
           <span class="badge off" id="tg-badge">disabled</span>
         </div>
         <div class="toggle-row" id="tg-toggle-row" onclick="toggleChannel('telegram')">
@@ -526,7 +525,7 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
       <!-- Discord -->
       <div class="card" id="card-discord">
         <div class="card-title">
-          🎮 Discord
+          Discord
           <span class="badge off" id="dc-badge">disabled</span>
         </div>
         <div class="toggle-row" onclick="toggleChannel('discord')">
@@ -558,7 +557,7 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
   <!-- MEMORY -->
   <div class="panel" id="panel-memory">
     <div class="panel-scroll" style="display:flex;flex-direction:column;height:100%;padding-bottom:16px">
-      <div class="panel-title">🧠 Memory</div>
+      <div class="panel-title">Memory</div>
       <p class="panel-sub" style="margin-bottom:14px">
         What bujji knows about you — persists across sessions.<br>
         bujji updates this automatically; you can also edit it directly.
@@ -567,7 +566,7 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
         placeholder="No memory yet. Start chatting and bujji will learn about you."></textarea>
       <div class="btn-row">
         <button class="btn btn-primary" onclick="saveMemory()">Save memory</button>
-        <button class="btn btn-ghost"   onclick="loadMemory()">↺ Reload</button>
+        <button class="btn btn-ghost"   onclick="loadMemory()">Reload</button>
       </div>
     </div>
   </div>
@@ -579,14 +578,14 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
 
       <!-- Header -->
       <div style="padding:20px 24px 0;flex-shrink:0">
-        <div class="panel-title">🧩 Skills Marketplace</div>
+        <div class="panel-title">Skills Marketplace</div>
         <p class="panel-sub">Install skills to shape how bujji behaves. Changes are instant — no restart needed.</p>
 
         <!-- Tab Bar -->
         <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:0">
-          <button class="mkt-tab active" id="tab-catalog"   onclick="mktTab('catalog')">🏪 Catalog</button>
-          <button class="mkt-tab"        id="tab-installed" onclick="mktTab('installed')">📦 Installed <span id="installed-count" class="nav-badge" style="margin-left:6px;display:none">0</span></button>
-          <button class="mkt-tab"        id="tab-create"    onclick="mktTab('create')">✏️ Create</button>
+          <button class="mkt-tab active" id="tab-catalog"   onclick="mktTab('catalog')">Catalog</button>
+          <button class="mkt-tab"        id="tab-installed" onclick="mktTab('installed')">Installed <span id="installed-count" class="nav-badge" style="margin-left:6px;display:none">0</span></button>
+          <button class="mkt-tab"        id="tab-create"    onclick="mktTab('create')">Create</button>
         </div>
       </div>
 
@@ -603,7 +602,7 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
             </a>
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px" id="catalog-grid">
-            <div class="empty"><div class="empty-ico">⏳</div><p>Loading…</p></div>
+            <div class="empty"><p>Loading...</p></div>
           </div>
         </div>
 
@@ -622,8 +621,8 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
             <textarea id="create-content" style="width:100%;height:320px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:12px;resize:vertical;line-height:1.6" placeholder="# Skill: My Writing Assistant&#10;&#10;## When to Use&#10;When the user asks to write, edit, or improve any text.&#10;&#10;## Behavior&#10;- Always ask about the intended audience first&#10;- Match the user's existing tone&#10;- Offer 2–3 alternatives when appropriate&#10;&#10;## Output Format&#10;Return the improved text in a code block, followed by a brief explanation of changes."></textarea>
 
             <div style="display:flex;gap:10px;margin-top:14px">
-              <button class="btn btn-primary" onclick="createSkill()">💾 Save Skill</button>
-              <button class="btn btn-ghost" onclick="fillTemplate()">📋 Use Template</button>
+              <button class="btn btn-primary" onclick="createSkill()">Save Skill</button>
+              <button class="btn btn-ghost" onclick="fillTemplate()">Use Template</button>
             </div>
           </div>
         </div>
@@ -636,15 +635,15 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
   <div id="edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center">
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;width:min(700px,95vw);max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
       <div style="padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-        <div style="font-weight:700;font-size:15px">✏️ Edit Skill: <span id="edit-modal-name"></span></div>
-        <button class="btn btn-ghost btn-sm" onclick="closeEditModal()">✕</button>
+        <div style="font-weight:700;font-size:15px">Edit Skill: <span id="edit-modal-name"></span></div>
+        <button class="btn btn-ghost btn-sm" onclick="closeEditModal()">X</button>
       </div>
       <div style="flex:1;overflow-y:auto;padding:18px 20px">
         <textarea id="edit-content" style="width:100%;height:400px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:12px;resize:vertical;line-height:1.6"></textarea>
       </div>
       <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
         <button class="btn btn-ghost" onclick="closeEditModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveEditedSkill()">💾 Save Changes</button>
+        <button class="btn btn-primary" onclick="saveEditedSkill()">Save</button>
       </div>
     </div>
   </div>
@@ -652,12 +651,12 @@ code{background:rgba(108,99,255,.15);padding:1px 5px;border-radius:4px;font-fami
   <!-- TOOLS -->
   <div class="panel" id="panel-tools">
     <div class="panel-scroll">
-      <div class="panel-title">🔧 Active Tools</div>
+      <div class="panel-title">Active Tools</div>
       <p class="panel-sub">
         Tools give bujji hands. Add one by creating <code>bujji/tools/mytool.py</code> with <code>@register_tool</code>.
       </p>
       <div id="tools-list">
-        <div class="empty"><div class="empty-ico">🔧</div><p>Loading…</p></div>
+        <div class="empty"><p>Loading...</p></div>
       </div>
     </div>
   </div>
@@ -737,12 +736,11 @@ function populateForms(cfg) {
   // LLM
   const providers = cfg.providers || {}
   const pnames    = Object.keys(providers)
-  const pname     = pnames[0] || 'openrouter'
+  const pname     = cfg.active_provider || pnames[0] || 'openrouter'
   const pcfg      = providers[pname] || {}
   document.getElementById('s-provider').value = pname
   document.getElementById('s-apikey').value   = pcfg.api_key || ''
   document.getElementById('s-model').value    = cfg.agents?.defaults?.model || ''
-  document.getElementById('s-brave').value    = cfg.tools?.web?.search?.api_key || ''
   document.getElementById('s-workspace').value = cfg.agents?.defaults?.workspace || ''
   loadNotion(cfg)
   onProviderChange()
@@ -843,7 +841,7 @@ function onProviderChange() {
     hint.innerHTML = link[1]
   } else {
     apig.style.opacity = '1'
-    document.getElementById('s-apikey').placeholder = 'Paste your key here…'
+    document.getElementById('s-apikey').placeholder = 'Paste your key here...'
     hint.innerHTML = link[0]
       ? `<a href="${link[0]}" target="_blank">${link[1]}</a>`
       : link[1]
@@ -870,10 +868,11 @@ async function saveLLM() {
   const base = PROVIDER_API_BASES[p] || ''
 
   const body = {
+    active_provider: p,
     providers: { [p]: { api_key: key || 'ollama', api_base: base } },
     agents:    { defaults: { model: mdl } },
   }
-  await saveConfig(body, 'LLM settings saved ✓')
+  await saveConfig(body, 'LLM settings saved')
   checkStatus()
 }
 
@@ -881,7 +880,7 @@ async function testLLM() {
   const btn = document.getElementById('btn-test-llm')
   const res = document.getElementById('llm-test-result')
   btn.disabled = true
-  btn.textContent = 'Testing…'
+  btn.textContent = 'Testing...'
   res.style.display = 'none'
   try {
     const r = await fetch('/api/config/test-llm', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
@@ -889,15 +888,15 @@ async function testLLM() {
     res.style.display = 'block'
     if (d.ok) {
       res.className = 'verify-result ok'
-      res.textContent = `✓ Connected to ${d.model}${d.preview ? ' — "' + d.preview + '"' : ''}`
+      res.textContent = `Connected to ${d.model}${d.preview ? ' — "' + d.preview + '"' : ''}`
     } else {
       res.className = 'verify-result err'
-      res.textContent = '✗ ' + d.error
+      res.textContent = d.error
     }
   } catch(e) {
     res.style.display = 'block'
     res.className = 'verify-result err'
-    res.textContent = '✗ ' + e.message
+    res.textContent = e.message
   } finally {
     btn.disabled = false
     btn.textContent = 'Test connection'
@@ -906,13 +905,13 @@ async function testLLM() {
 
 async function saveBrave() {
   const key = document.getElementById('s-brave').value.trim()
-  await saveConfig({tools:{web:{search:{api_key:key}}}}, 'Brave Search key saved ✓')
+  await saveConfig({tools:{web:{search:{api_key:key}}}}, 'Brave Search key saved')
 }
 
 async function saveWorkspace() {
   const ws = document.getElementById('s-workspace').value.trim()
   if (!ws) { toast('Enter a workspace path', 'err'); return }
-  await saveConfig({agents:{defaults:{workspace:ws}}}, 'Workspace saved ✓')
+  await saveConfig({agents:{defaults:{workspace:ws}}}, 'Workspace saved')
 }
 
 // ── Notion ────────────────────────────────────────────────────────────────
@@ -926,7 +925,7 @@ function loadNotion(cfg) {
 
 async function saveNotion() {
   const key = document.getElementById('s-notion')?.value.trim() || ''
-  await saveConfig({ tools: { notion: { api_key: key } } }, key ? 'Notion key saved ✓' : 'Notion key cleared')
+  await saveConfig({ tools: { notion: { api_key: key } } }, key ? 'Notion key saved' : 'Notion key cleared')
   const r = await fetch('/api/config/raw')
   if (r.ok) loadNotion(await r.json())
 }
@@ -963,7 +962,7 @@ async function testTelegram() {
   const res = document.getElementById('tg-verify-result')
   res.style.display = 'block'
   res.className = 'verify-result'
-  res.textContent = 'Verifying…'
+  res.textContent = 'Verifying...'
   try {
     const r = await fetch('/api/config/test-telegram', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -972,14 +971,14 @@ async function testTelegram() {
     const d = await r.json()
     if (d.ok) {
       res.className = 'verify-result ok'
-      res.textContent = `✓ Bot: @${d.username} (${d.name})`
+      res.textContent = `Bot: @${d.username} (${d.name})`
     } else {
       res.className = 'verify-result err'
-      res.textContent = '✗ ' + d.error
+      res.textContent = d.error
     }
   } catch(e) {
     res.className = 'verify-result err'
-    res.textContent = '✗ ' + e.message
+    res.textContent = e.message
   }
 }
 
@@ -990,7 +989,7 @@ async function saveTelegram() {
   const enabled  = document.getElementById('tg-toggle').classList.contains('on')
   await saveConfig({
     channels: { telegram: { enabled, token, allow_from: allowFrom } }
-  }, 'Telegram saved ✓')
+  }, 'Telegram saved')
   refreshChannelBadges()
 }
 
@@ -1001,7 +1000,7 @@ async function saveDiscord() {
   const enabled  = document.getElementById('dc-toggle').classList.contains('on')
   await saveConfig({
     channels: { discord: { enabled, token, allow_from: allowFrom } }
-  }, 'Discord saved ✓')
+  }, 'Discord saved')
   refreshChannelBadges()
 }
 
@@ -1020,7 +1019,7 @@ async function saveMemory() {
       body: JSON.stringify({content})
     })
     const d = await r.json()
-    toast(d.ok ? 'Memory saved ✓' : 'Save failed', d.ok ? 'ok' : 'err')
+    toast(d.ok ? 'Memory saved' : 'Save failed', d.ok ? 'ok' : 'err')
   } catch(e) { toast('Error: ' + e.message, 'err') }
 }
 
@@ -1044,7 +1043,7 @@ function mktTab(tab) {
 
 async function renderCatalog() {
   const grid = document.getElementById('catalog-grid')
-  grid.innerHTML = '<div class="empty"><div class="empty-ico" style="animation:spin 1s linear infinite">⏳</div><p>Loading from GitHub…</p></div>'
+  grid.innerHTML = '<div class="empty"><p>Loading from GitHub...</p></div>'
   try {
     const r    = await fetch(SKILLS_REPO_INDEX + '?t=' + Date.now(), {signal: AbortSignal.timeout(8000)})
     if (!r.ok) throw new Error('GitHub returned ' + r.status)
@@ -1055,7 +1054,7 @@ async function renderCatalog() {
     document.getElementById('catalog-gh-link').style.display = 'inline'
     renderCatalogGrid()
   } catch(e) {
-    grid.innerHTML = '<div class="empty"><div class="empty-ico">⚠️</div><p>Could not load catalog from GitHub.<br><small style="color:var(--muted)">' + esc(e.message) + '</small></p><button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="renderCatalog()">↺ Retry</button></div>'
+    grid.innerHTML = '<div class="empty"><p>Could not load catalog from GitHub.<br><small style="color:var(--muted)">' + esc(e.message) + '</small></p><button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="renderCatalog()">Retry</button></div>'
   }
 }
 
@@ -1068,7 +1067,6 @@ function renderCatalogGrid() {
   grid.innerHTML = _catalog.map(s => `
     <div class="catalog-card" id="ccard-${s.id}">
       <div class="catalog-card-head">
-        <span style="font-size:26px">${s.icon}</span>
         <div>
           <div class="catalog-card-title">${esc(s.title)}</div>
           <div class="catalog-card-desc">${esc(s.description)}</div>
@@ -1078,7 +1076,7 @@ function renderCatalogGrid() {
         ${s.tags.map(t=>`<span class="tag">${t}</span>`).join('')}
         <span class="tag" style="margin-left:auto;opacity:.6">by ${esc(s.author)}</span>
       </div>
-      <button class="btn btn-primary btn-sm" id="ibtn-${s.id}" onclick="installSkill('${s.id}')">⬇ Install</button>
+      <button class="btn btn-primary btn-sm" id="ibtn-${s.id}" onclick="installSkill('${s.id}')">Install</button>
     </div>`).join('')
   refreshCatalogButtons()
 }
@@ -1089,7 +1087,7 @@ function refreshCatalogButtons() {
     if (!btn) return
     const installed = _installedSkills.some(i => i.name === s.id)
     btn.disabled     = installed
-    btn.textContent  = installed ? '✓ Installed' : '⬇ Install'
+    btn.textContent  = installed ? 'Installed' : 'Install'
     btn.style.opacity = installed ? '.5' : '1'
   })
 }
@@ -1098,18 +1096,15 @@ async function installSkill(id) {
   const skill = _catalog.find(s => s.id === id)
   if (!skill) return
   const btn = document.getElementById('ibtn-' + id)
-  if (btn) { btn.disabled = true; btn.textContent = 'Installing…' }
-
   try {
+    if (btn) { btn.disabled = true; btn.textContent = 'Installing...' }
     let content = skill.content || null
-
-    // Only fetch from GitHub if no embedded content (community skills from live index)
     if (!content && skill.skill_url) {
-      if (btn) btn.textContent = 'Fetching…'
+      if (btn) btn.textContent = 'Fetching...'
       const mdRes = await fetch(skill.skill_url + '?t=' + Date.now(), {signal: AbortSignal.timeout(8000)})
       if (!mdRes.ok) throw new Error(`Could not fetch skill from GitHub (${mdRes.status}). Check your internet connection or try again.`)
       content = await mdRes.text()
-      if (btn) btn.textContent = 'Installing…'
+      if (btn) btn.textContent = 'Installing...'
     }
 
     if (!content) throw new Error('No skill content available')
@@ -1122,25 +1117,25 @@ async function installSkill(id) {
     })
     const d = await r.json()
     if (d.ok) {
-      toast('✅ ' + skill.title + ' installed! Agent picks it up on next message.')
+      toast(skill.title + ' installed! Agent picks it up on next message.')
       _installedSkills.push({name: skill.id, content})
       refreshCatalogButtons()
       updateInstalledCount()
     } else if (r.status === 409) {
-      toast('ℹ️ Already installed — edit it in the Installed tab')
-      if (btn) btn.textContent = '✓ Installed'
+      toast('Already installed — edit it in the Installed tab')
+      if (btn) btn.textContent = 'Installed'
     } else {
       throw new Error(d.error || 'Install failed')
     }
   } catch(e) {
-    toast('❌ ' + e.message)
-    if (btn) { btn.disabled = false; btn.textContent = '⬇ Install' }
+    toast(e.message, 'err')
+    if (btn) { btn.disabled = false; btn.textContent = 'Install' }
   }
 }
 
 async function loadSkills() {
   const el = document.getElementById('installed-list')
-  el.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><p>Loading…</p></div>'
+  el.innerHTML = '<div class="empty"><p>Loading...</p></div>'
   try {
     const r = await fetch('/api/skills')
     _installedSkills = await r.json()
@@ -1148,21 +1143,19 @@ async function loadSkills() {
     refreshCatalogButtons()
     if (!_installedSkills.length) {
       el.innerHTML = `<div class="empty">
-        <div class="empty-ico">📦</div>
         <p>No skills installed yet.<br>Go to the <b>Catalog</b> tab to install one.</p>
       </div>`
       return
     }
     el.innerHTML = _installedSkills.map(s => `
       <div class="installed-card">
-        <div style="font-size:22px">📗</div>
         <div class="installed-card-body">
           <div class="installed-card-name">${esc(s.name)}</div>
-          <div class="installed-card-preview">${esc((s.content||'').slice(0,120))}…</div>
+          <div class="installed-card-preview">${esc((s.content||'').slice(0,120))}...</div>
         </div>
         <div class="installed-card-actions">
-          <button class="btn btn-ghost btn-sm" onclick="openEditModal('${esc(s.name)}', ${JSON.stringify(esc(s.content))})">✏️ Edit</button>
-          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteSkill('${esc(s.name)}')">🗑 Delete</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEditModal('${esc(s.name)}', ${JSON.stringify(esc(s.content))})">Edit</button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteSkill('${esc(s.name)}')">Delete</button>
         </div>
       </div>`).join('')
   } catch(e) {
@@ -1180,8 +1173,8 @@ function updateInstalledCount() {
 async function createSkill() {
   const name    = document.getElementById('create-name').value.trim().toLowerCase().replace(/\s+/g,'-')
   const content = document.getElementById('create-content').value.trim()
-  if (!name)    { toast('❌ Enter a skill name'); return }
-  if (!content) { toast('❌ Enter skill content'); return }
+  if (!name)    { toast('Enter a skill name', 'err'); return }
+  if (!content) { toast('Enter skill content', 'err'); return }
   try {
     const r = await fetch('/api/skills', {
       method: 'POST',
@@ -1190,16 +1183,16 @@ async function createSkill() {
     })
     const d = await r.json()
     if (d.ok) {
-      toast('✅ Skill "' + name + '" created! Agent loads it on next message.')
+      toast('Skill "' + name + '" created! Agent loads it on next message.')
       document.getElementById('create-name').value    = ''
       document.getElementById('create-content').value = ''
       _installedSkills.push({name, content})
       updateInstalledCount()
       refreshCatalogButtons()
     } else {
-      toast('❌ ' + (d.error || 'Create failed'))
+      toast(d.error || 'Create failed', 'err')
     }
-  } catch(e) { toast('❌ ' + e.message) }
+  } catch(e) { toast(e.message, 'err') }
 }
 
 function fillTemplate() {
@@ -1235,7 +1228,7 @@ function closeEditModal() {
 
 async function saveEditedSkill() {
   const content = document.getElementById('edit-content').value.trim()
-  if (!content) { toast('❌ Content cannot be empty'); return }
+  if (!content) { toast('Content cannot be empty', 'err'); return }
   try {
     const r = await fetch('/api/skills/update', {
       method: 'POST',
@@ -1244,13 +1237,13 @@ async function saveEditedSkill() {
     })
     const d = await r.json()
     if (d.ok) {
-      toast('✅ Skill updated — agent picks it up instantly')
+      toast('Skill updated — agent picks it up instantly')
       closeEditModal()
       loadSkills()
     } else {
-      toast('❌ ' + (d.error || 'Update failed'))
+      toast(d.error || 'Update failed', 'err')
     }
-  } catch(e) { toast('❌ ' + e.message) }
+  } catch(e) { toast(e.message, 'err') }
 }
 
 async function deleteSkill(name) {
@@ -1263,15 +1256,15 @@ async function deleteSkill(name) {
     })
     const d = await r.json()
     if (d.ok) {
-      toast('🗑 Skill "' + name + '" deleted')
+      toast('Skill "' + name + '" deleted')
       _installedSkills = _installedSkills.filter(s => s.name !== name)
       updateInstalledCount()
       refreshCatalogButtons()
       loadSkills()
     } else {
-      toast('❌ ' + (d.error || 'Delete failed'))
+      toast(d.error || 'Delete failed', 'err')
     }
-  } catch(e) { toast('❌ ' + e.message) }
+  } catch(e) { toast(e.message, 'err') }
 }
 // ── Tools ──────────────────────────────────────────────────────────────────
 async function loadTools() {
@@ -1280,7 +1273,7 @@ async function loadTools() {
     const r = await fetch('/api/tools')
     const tools = await r.json()
     if (!tools.length) {
-      el.innerHTML = '<div class="empty"><div class="empty-ico">🔧</div><p>No tools found.</p></div>'
+      el.innerHTML = '<div class="empty"><p>No tools found.</p></div>'
       return
     }
     el.innerHTML = `<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">` +
@@ -1377,14 +1370,14 @@ async function sendMessage() {
               res.className = 'tool-res'
               res.textContent = evt.result
               body.appendChild(res)
-              pending.querySelector('.tool-st').textContent = '✓ done'
+              pending.querySelector('.tool-st').textContent = 'done'
             }
           }
           scrollDown()
 
         } else if (evt.type === 'error') {
           if (typing?.parentNode) typing.remove()
-          bubble.innerHTML = `<span style="color:var(--red)">⚠ ${esc(evt.content)}</span>`
+          bubble.innerHTML = `<span style="color:var(--red)">Error: ${esc(evt.content)}</span>`
           scrollDown()
 
         } else if (evt.type === 'done') {
@@ -1395,7 +1388,7 @@ async function sendMessage() {
       }
     }
   } catch(e) {
-    botEl.querySelector('.bubble').innerHTML = `<span style="color:var(--red)">⚠ ${esc(e.message)}</span>`
+    botEl.querySelector('.bubble').innerHTML = `<span style="color:var(--red)">Error: ${esc(e.message)}</span>`
   } finally {
     streaming = false
     document.getElementById('btn-send').disabled = false
@@ -1429,9 +1422,9 @@ function makeToolCard(name, args, result) {
   const argsStr = args ? JSON.stringify(args, null, 2) : ''
   card.innerHTML = `
     <div class="tool-head" onclick="this.nextElementSibling.classList.toggle('open')">
-      <span>🔧</span>
+      <span>Tool</span>
       <span class="tool-fname">${esc(name)}</span>
-      <span class="tool-st">${result ? '✓ done' : '⏳ running…'}</span>
+      <span class="tool-st">${result ? 'done' : 'running...'}</span>
     </div>
     <div class="tool-body">
       ${argsStr ? `<div class="tool-args">${esc(argsStr)}</div>` : ''}
@@ -1444,7 +1437,7 @@ async function clearChat() {
   await fetch('/api/clear', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:SESSION_ID})})
   document.getElementById('messages').innerHTML = `
     <div class="empty" id="chat-empty">
-      <div class="empty-ico">🦞</div>
+      
       <p>Chat cleared. Ask me anything!</p>
     </div>`
   toast('Chat cleared', 'ok')
@@ -1459,7 +1452,7 @@ async function saveConfig(body, successMsg) {
     })
     const d = await r.json()
     if (d.ok) {
-      toast(successMsg || 'Saved ✓', 'ok')
+      toast(successMsg || 'Saved', 'ok')
       await loadRawConfig()   // refresh forms so masked fields update
     } else {
       toast('Save failed: ' + JSON.stringify(d.error), 'err')
@@ -1502,7 +1495,7 @@ function md(text) {
     '<br><img src="$1" style="max-width:100%;max-height:400px;border-radius:8px;margin:6px 0;display:block" onerror="this.style.display=\'none\'"><br>')
   h = h.replace(/\[(.+?)\]\((https?:\/\/.+?)\)/g, '<a href="$2" target="_blank" style="color:var(--accent2)">$1</a>')
   h = h.replace(/(?<!src=")(https?:\/\/[^\s<"]+)/g, '<a href="$1" target="_blank" style="color:var(--accent2)">$1</a>')
-  h = h.replace(/\n/g, '<br>')
+h = h.replace(/\n/g, '<br>')
   return h
 }
 function toast(msg, type='') {

@@ -28,6 +28,7 @@ from bujji.tools.shell    import exec
 from bujji.tools.web      import web_search
 from bujji.tools.utils    import get_time, message
 from bujji.tools.memory   import read_user_memory, append_user_memory, update_user_memory
+from bujji.tools.todo     import create_todo, next_todo, list_todos, clear_todos
 
 __all__ = [
     "ToolRegistry", "register_tool", "ToolContext",
@@ -36,4 +37,5 @@ __all__ = [
     "web_search",
     "get_time", "message",
     "read_user_memory", "append_user_memory", "update_user_memory",
+    "create_todo", "next_todo", "list_todos", "clear_todos",
 ]
