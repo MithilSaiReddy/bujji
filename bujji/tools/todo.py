@@ -131,15 +131,15 @@ def create_todo(task: str, _ctx: ToolContext = None) -> str:
 
 @register_tool(
     description=(
-        "Get the next pending task from todo.md and optionally mark the previous task as complete. "
-        "Call this after successfully completing a task to automatically get the next one. "
+        "Get the next pending task from todo.md. "
+        "Pass complete_previous=True AFTER you finish the current task to mark it done and advance. "
         "This enables automatic continuation through all pending tasks."
     ),
     params=[
-        param("complete_previous", "Mark the previous task as complete before getting next", type="boolean", default=True),
+        param("complete_previous", "Mark the current task as complete before advancing to the next", type="boolean", default=False),
     ]
 )
-def next_todo(complete_previous: bool = True, _ctx: ToolContext = None) -> str:
+def next_todo(complete_previous: bool = False, _ctx: ToolContext = None) -> str:
     tasks = _read_todo(_ctx)
     
     if not tasks:

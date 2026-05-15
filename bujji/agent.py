@@ -124,9 +124,10 @@ def build_system_prompt(cfg: dict, skills_loader: SkillsLoader) -> str:
             ## Task Mode
             When a user request has multiple steps (e.g., "set up my dev environment",
             "build a website", "migrate files"), use create_todo() to break it into
-            numbered subtasks, then use next_todo() to work through them sequentially.
-            After each successful tool execution, call next_todo() to automatically
-            get the next task and continue until all are done.
+            numbered subtasks. Work through them one at a time. When you finish a
+            task, call next_todo(complete_previous=True) to mark it done and get
+            the next one. The system will automatically continue through all tasks
+            until completion — no need to ask the user for permission between steps.
             Only ask the user if: input is ambiguous, operation is dangerous, or
             a task has failed after 2 retries.
         """).strip()
@@ -216,82 +217,93 @@ class AgentLoop:
         user_message: str,
         history:      Optional[list] = None,
         stream:       bool           = True,
+        auto_continue: bool          = True,
     ) -> str:
         """
         Execute one conversational turn.
-        Returns the final text (may be empty string if fully streamed via on_token).
+        When auto_continue=True, after the agent finishes its response the
+        loop checks for pending todo items and automatically continues
+        working through them — no user prompt needed between tasks.
+        Returns the final concatenated text.
         """
-        # Rebuild system prompt each turn — picks up any skill/identity file changes
         system_prompt = build_system_prompt(self.cfg, self._skills_loader)
+        tools_schema  = self.tools.schema()
 
-        messages = [{"role": "system", "content": system_prompt}]
-        if history:
-            messages.extend(history)
-        messages.append({"role": "user", "content": user_message})
+        # Internal message window — copies caller history so auto-continue
+        # turns don't pollute the external session history.
+        internal_hist = list(history) if history else []
+        current_msg   = user_message
+        parts: list[str] = []
 
-        tools_schema = self.tools.schema()
-        first_call   = True
+        while True:
+            messages = [{"role": "system", "content": system_prompt}]
+            messages.extend(internal_hist)
+            messages.append({"role": "user", "content": current_msg})
 
-        for iteration in range(self.max_iter):
-            # Only stream the first LLM call (before any tool use)
-            use_stream = stream and first_call
-            first_call = False
+            first_call = True
+            final      = ""
 
-            try:
-                resp = self.llm.chat(
-                    messages,
-                    tools        = tools_schema,
-                    stream       = use_stream,
-                    token_cb     = self.callbacks.get("on_token") if use_stream else None,
-                )
-            except Exception as e:
-                err = f"LLM call failed: {type(e).__name__}: {e}"
-                if self.callbacks.get("on_error"):
-                    self.callbacks["on_error"](err)
-                return f"[ERROR] {err}"
+            for iteration in range(self.max_iter):
+                use_stream = stream and first_call
+                first_call = False
 
-            choice     = resp["choices"][0]
-            msg        = choice["message"]
-            messages.append(msg)
-            tool_calls = msg.get("tool_calls") or []
-
-            if not tool_calls:
-                # ── Final text response ──
-                final = (msg.get("content") or "").strip()
-                return final
-
-            # ── Execute all requested tools ──
-            for tc in tool_calls:
-                fn   = tc.get("function", {})
-                name = fn.get("name", "")
                 try:
-                    args = json.loads(fn.get("arguments", "{}"))
-                except json.JSONDecodeError:
-                    args = {}
+                    resp = self.llm.chat(
+                        messages,
+                        tools    = tools_schema,
+                        stream   = use_stream,
+                        token_cb = self.callbacks.get("on_token") if use_stream else None,
+                    )
+                except Exception as e:
+                    err = f"LLM call failed: {type(e).__name__}: {e}"
+                    if self.callbacks.get("on_error"):
+                        self.callbacks["on_error"](err)
+                    return f"[ERROR] {err}"
 
-                # Execute (ToolRegistry handles callbacks internally)
-                result = self.tools.call(name, args)
+                choice     = resp["choices"][0]
+                msg        = choice["message"]
+                messages.append(msg)
+                tool_calls = msg.get("tool_calls") or []
 
-                messages.append({
-                    "role":         "tool",
-                    "tool_call_id": tc.get("id", "t0"),
-                    "content":      result,
-                })
+                if not tool_calls:
+                    final = (msg.get("content") or "").strip()
+                    break
 
-                # Auto-continue: check for pending todos after successful execution
-                # Only continue if the tool didn't error and todo has pending tasks
-                if not result.startswith("[TOOL ERROR"):
-                    next_result = self.tools.call("next_todo", {"complete_previous": True})
-                    if "[TASK" in next_result or "[DONE]" in next_result:
-                        messages.append({
-                            "role":         "tool",
-                            "tool_call_id": tc.get("id", "t0") + "_next",
-                            "content":      next_result,
-                        })
+                for tc in tool_calls:
+                    fn   = tc.get("function", {})
+                    name = fn.get("name", "")
+                    try:
+                        args = json.loads(fn.get("arguments", "{}"))
+                    except json.JSONDecodeError:
+                        args = {}
 
-            # Loop → let LLM see the tool results
+                    result = self.tools.call(name, args)
 
-        return "[Max tool iterations reached — task may be incomplete]"
+                    messages.append({
+                        "role":         "tool",
+                        "tool_call_id": tc.get("id", "t0"),
+                        "content":      result,
+                    })
+            else:
+                return "[Max tool iterations reached — task may be incomplete]"
+
+            parts.append(final)
+
+            if not auto_continue:
+                break
+
+            # ── Auto-continue: advance to next todo item ──
+            next_result = self.tools.call("next_todo", {"complete_previous": True})
+            if next_result.startswith("[TASK"):
+                internal_hist.append({"role": "assistant", "content": final})
+                current_msg = f"[Auto-continue] Continue with the next todo item:\n\n{next_result}"
+                continue
+            elif next_result.startswith("[DONE]"):
+                parts.append(next_result)
+
+            break
+
+        return "\n\n".join(parts) if len(parts) > 1 else (parts[0] if parts else "")
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  HEARTBEAT SERVICE
@@ -332,7 +344,7 @@ class HeartbeatService:
                     f"{content}"
                 )
                 print(f"\n{LOGO} [Heartbeat] Running periodic tasks...", file=sys.stderr)
-                self.agent.run(prompt, stream=False)
+                self.agent.run(prompt, stream=False, auto_continue=False)
             except Exception as e:
                 print(f"[WARN] Heartbeat error: {e}", file=sys.stderr)
 
@@ -342,6 +354,16 @@ class HeartbeatService:
 # ─────────────────────────────────────────────────────────────────────────────
 #  CRON SERVICE
 # ─────────────────────────────────────────────────────────────────────────────
+
+SAMPLE_CRON_JOBS = [
+    {
+        "name":             "example-weather-check",
+        "prompt":           "Check today's weather and save a summary to weather.md",
+        "interval_minutes": 1440,
+        "last_run":         None,
+    },
+]
+
 
 class CronService:
     """
@@ -360,24 +382,48 @@ class CronService:
 
     def __init__(self, agent: AgentLoop, workspace: Path):
         self.agent     = agent
-        self.jobs_file = workspace / "cron" / "jobs.json"
+        self._cron_dir = workspace / "cron"
+        self.jobs_file = self._cron_dir / "jobs.json"
         self._stop     = threading.Event()
 
     def start(self) -> None:
+        self._ensure_files()
         threading.Thread(target=self._loop, daemon=True).start()
+        print(
+            f"[INFO] Cron started — poll_interval=60s, file={self.jobs_file}",
+            file=sys.stderr,
+        )
+
+    def _ensure_files(self) -> None:
+        self._cron_dir.mkdir(parents=True, exist_ok=True)
+        if not self.jobs_file.exists():
+            self.jobs_file.write_text(
+                json.dumps(SAMPLE_CRON_JOBS, indent=2), encoding="utf-8"
+            )
+            print(
+                f"[INFO] Created sample cron jobs file: {self.jobs_file}",
+                file=sys.stderr,
+            )
 
     def _loop(self) -> None:
         while not self._stop.wait(60):
             if not self.jobs_file.exists():
                 continue
             try:
-                jobs    = json.loads(self.jobs_file.read_text(encoding="utf-8"))
+                raw     = self.jobs_file.read_text(encoding="utf-8")
+                jobs    = json.loads(raw)
                 now     = datetime.datetime.now()
                 changed = False
                 for job in jobs:
+                    if not isinstance(job, dict) or not job.get("prompt"):
+                        continue
                     if self._should_run(job, now):
                         print(f"[Cron] Running: {job.get('name', 'unnamed')}", file=sys.stderr)
-                        self.agent.run(job["prompt"], stream=False)
+                        try:
+                            self.agent.run(job["prompt"], stream=False, auto_continue=False)
+                        except Exception as e:
+                            print(f"[WARN] Cron job '{job.get('name', 'unnamed')}' failed: {e}", file=sys.stderr)
+                            continue
                         job["last_run"] = now.isoformat()
                         changed = True
                 if changed:
@@ -391,7 +437,7 @@ class CronService:
         if not last_run:
             return True
         try:
-            last = datetime.datetime.fromisoformat(last_run)
+            last = datetime.datetime.fromisoformat(str(last_run))
             return (now - last).total_seconds() >= job.get("interval_minutes", 60) * 60
         except Exception:
             return False
