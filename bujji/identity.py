@@ -129,3 +129,30 @@ def read_user_file(workspace: Path) -> str:
     if not path.exists():
         return "(USER.md not found)"
     return path.read_text(encoding="utf-8", errors="replace")
+
+
+class IdentityManager:
+    """Convenience wrapper for loading individual identity files by name.
+    
+    Used by subagents.py to give child agents custom identity context.
+    """
+
+    _MAPPING = {
+        "SOUL":     SOUL_FILE,
+        "IDENTITY": IDENTITY_FILE,
+        "USER":     USER_FILE,
+        "AGENT":    AGENT_FILE,
+    }
+
+    def __init__(self, cfg: dict):
+        from bujji.config import workspace_path
+        self.workspace = workspace_path(cfg)
+
+    def load(self, name: str) -> str:
+        fname = self._MAPPING.get(name.upper())
+        if not fname:
+            return ""
+        path = self.workspace / fname
+        if path.exists():
+            return path.read_text(encoding="utf-8", errors="replace")
+        return ""

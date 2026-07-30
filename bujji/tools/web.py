@@ -46,5 +46,6 @@ def web_search(query: str, max_results: int = 5, _ctx: ToolContext = None) -> st
         url     = r.get("href",  "")
         body = r.get("body", "")
         snippet = " ".join(body) if isinstance(body, list) else str(body).strip()
+        lines.append(f"{i}. **{title}**\n   {url}\n   {snippet}")
 
     return "\n\n".join(lines)

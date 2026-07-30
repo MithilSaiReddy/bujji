@@ -167,14 +167,17 @@ class AgentLoop:
 
     def __init__(
         self,
-        cfg:             dict,
-        send_message_fn: Optional[Callable[[str], None]] = None,
-        callbacks:       Optional[dict]                  = None,
+        cfg:                    dict,
+        send_message_fn:        Optional[Callable[[str], None]] = None,
+        callbacks:              Optional[dict]                  = None,
+        system_prompt_override: Optional[str]                   = None,
+        max_tool_iterations:    Optional[int]                   = None,
     ):
         self.cfg      = cfg
         self.callbacks = callbacks or {}
+        self._system_prompt_override = system_prompt_override
         defaults      = cfg["agents"]["defaults"]
-        self.max_iter = defaults.get("max_tool_iterations", 20)
+        self.max_iter = max_tool_iterations or defaults.get("max_tool_iterations", 20)
 
         pname, api_key, api_base, model = get_active_provider(cfg)
         if not pname:
@@ -218,6 +221,7 @@ class AgentLoop:
         history:      Optional[list] = None,
         stream:       bool           = True,
         auto_continue: bool          = True,
+        on_token:     Optional[Callable[[str], None]] = None,
     ) -> str:
         """
         Execute one conversational turn.
@@ -226,7 +230,7 @@ class AgentLoop:
         working through them — no user prompt needed between tasks.
         Returns the final concatenated text.
         """
-        system_prompt = build_system_prompt(self.cfg, self._skills_loader)
+        system_prompt = self._system_prompt_override or build_system_prompt(self.cfg, self._skills_loader)
         tools_schema  = self.tools.schema()
 
         # Internal message window — copies caller history so auto-continue
@@ -248,11 +252,12 @@ class AgentLoop:
                 first_call = False
 
                 try:
+                    token_cb = on_token or self.callbacks.get("on_token")
                     resp = self.llm.chat(
                         messages,
                         tools    = tools_schema,
                         stream   = use_stream,
-                        token_cb = self.callbacks.get("on_token") if use_stream else None,
+                        token_cb = token_cb if use_stream else None,
                     )
                 except Exception as e:
                     err = f"LLM call failed: {type(e).__name__}: {e}"
